@@ -1,0 +1,5 @@
+{
+  "name": "TSV Data Viewer",
+  "description": "A tool to view and filter TSV files without altering data format.",
+  "requestFramePermissions": []
+}

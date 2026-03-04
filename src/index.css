@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-turquoise: #40E0D0;
+  --color-brand-dark: #2F4F4F;
+  --color-brand-gray: #F8F9FA;
+  --color-brand-text: #202020;
+}
+
+body {
+  @apply antialiased bg-brand-gray text-brand-text;
+}

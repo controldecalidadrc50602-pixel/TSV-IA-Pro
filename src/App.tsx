@@ -1,0 +1,551 @@
+import React, { useState, useEffect } from 'react';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+import { FileUpload } from '@/components/FileUpload';
+import { DataTable } from '@/components/DataTable';
+import { Dashboard } from '@/components/Dashboard';
+import { ChatAssistant } from '@/components/ChatAssistant';
+import { Login } from '@/components/Login';
+import { processData, generateDataSummary, DataStats } from '@/lib/data-processor';
+import { saveFile, getFiles, deleteFile } from '@/lib/storage';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
+  History, UploadCloud, Download, Menu, X, MessageSquare,
+  LogOut, Save, CheckCircle, Database, Vault
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface ParsedData {
+  headers: string[];
+  rows: string[][];
+  fileName: string;
+  stats: DataStats;
+  summary: string;
+}
+
+type Tab = 'upload' | 'viewer' | 'dashboard' | 'history';
+
+export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('upload');
+  const [data, setData] = useState<ParsedData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [historyFiles, setHistoryFiles] = useState<any[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [reportName, setReportName] = useState('');
+
+  // Load history on mount
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const files = await getFiles();
+      setHistoryFiles(files.reverse()); // Newest first
+    } catch (err) {
+      console.error("Failed to load history", err);
+    }
+  };
+
+  const processFileContent = async (headers: string[], rawRows: any[][], fileName: string) => {
+      // Ensure all cells are strings for initial processing
+      const stringRows = rawRows.map(row => row.map(cell => {
+          if (cell === null || cell === undefined) return '';
+          return String(cell);
+      }));
+
+      // Process Data (Clean, Format Dates, Stats)
+      const { processedRows, stats } = processData(headers, stringRows);
+      
+      // Convert back to string[][] for DataTable (keeping formatting)
+      const rows = processedRows.map(r => headers.map(h => String(r[h])));
+      
+      const summary = generateDataSummary(headers, rows, stats);
+
+      setData({
+        headers,
+        rows,
+        fileName,
+        stats,
+        summary
+      });
+      
+      setReportName(prev => prev || fileName.split('.')[0]); // Use alias if set, else filename
+      setActiveTab('dashboard'); // Auto switch to dashboard
+      setIsLoading(false);
+  };
+
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        // Basic check for encoding issues (replacement characters)
+        if (text.includes('')) {
+           // Try reading as ISO-8859-1 if UTF-8 seems to fail
+           const isoReader = new FileReader();
+           isoReader.onload = (ev) => resolve(ev.target?.result as string);
+           isoReader.onerror = (err) => reject(err);
+           isoReader.readAsText(file, 'ISO-8859-1');
+        } else {
+           resolve(text);
+        }
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsText(file, 'UTF-8');
+    });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setIsLoading(true);
+    setError(null);
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    try {
+      if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
+          const content = await readFileContent(file);
+          
+          Papa.parse(content, {
+            skipEmptyLines: true,
+            complete: async (results) => {
+              const rawData = results.data as string[][];
+              if (!rawData || rawData.length === 0) {
+                  setError("El archivo parece estar vacío.");
+                  setIsLoading(false);
+                  return;
+              }
+              // Trim headers
+              const headers = rawData[0].map(h => h.trim());
+              const rawRows = rawData.slice(1);
+              await processFileContent(headers, rawRows, file.name);
+            },
+            error: (err) => {
+              setError(`⚠️ Error al interpretar el archivo. Verifica que el formato sea correcto o que no esté protegido con contraseña.`);
+              setIsLoading(false);
+            }
+          });
+      } else if (ext === 'xlsx' || ext === 'xls') {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+              try {
+                  const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                  const workbook = XLSX.read(data, { type: 'array' });
+                  const firstSheetName = workbook.SheetNames[0];
+                  const worksheet = workbook.Sheets[firstSheetName];
+                  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                  
+                  if (!jsonData || jsonData.length === 0) {
+                      setError("El archivo parece estar vacío.");
+                      setIsLoading(false);
+                      return;
+                  }
+
+                  const rawHeaders = jsonData[0] as string[];
+                  // Trim headers
+                  const headers = rawHeaders.map(h => String(h).trim());
+                  const rawRows = jsonData.slice(1) as any[][];
+                  await processFileContent(headers, rawRows, file.name);
+              } catch (err) {
+                  setError(`⚠️ Error al interpretar el archivo. Verifica que el formato sea correcto o que no esté protegido con contraseña.`);
+                  setIsLoading(false);
+              }
+          };
+          reader.readAsArrayBuffer(file);
+      } else {
+          setError("Formato de archivo no soportado.");
+          setIsLoading(false);
+      }
+    } catch (err) {
+       setError(`⚠️ Error al interpretar el archivo. Verifica que el formato sea correcto o que no esté protegido con contraseña.`);
+       setIsLoading(false);
+    }
+  };
+
+  const handleFinishAndSave = async () => {
+    if (!data) return;
+    if (!reportName.trim()) {
+        alert("Por favor ingresa un nombre para el reporte.");
+        return;
+    }
+
+    setIsLoading(true);
+    try {
+      await saveFile(reportName, data.headers, data.rows);
+      await loadHistory();
+      
+      // Clear screen and reset
+      setData(null);
+      setReportName('');
+      setActiveTab('upload');
+    } catch (err) {
+      console.error("Error saving file", err);
+      setError("Error al guardar el archivo.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadFromHistory = (file: any) => {
+    const { processedRows, stats } = processData(file.headers, file.data);
+    const summary = generateDataSummary(file.headers, file.data, stats);
+    
+    setData({
+      headers: file.headers,
+      rows: file.data,
+      fileName: file.name,
+      stats,
+      summary
+    });
+    setReportName(file.name);
+    setActiveTab('dashboard');
+  };
+
+  const handleDeleteHistory = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await deleteFile(id);
+    await loadHistory();
+  };
+
+  const handleExportExcel = () => {
+    if (!data) return;
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    
+    // Add Title Row
+    const title = [["TSV Intelligence Pro - Reporte Premium"]];
+    const meta = [[`Reporte: ${reportName}`, `Fecha: ${new Date().toLocaleDateString()}`]];
+    const emptyRow = [[]];
+    const headers = [data.headers];
+    const rows = data.rows; // These rows already have the formatted time strings from processData
+
+    // Add Totals Row at the end
+    const totalsRow = data.headers.map(h => data.stats.columnTotals[h] || '');
+    const totalsLabel = ["TOTALES", ...totalsRow.slice(1)]; // Add label to first column if empty, or just append
+
+    const wsData = [...title, ...meta, ...emptyRow, ...headers, ...rows, ...emptyRow, totalsLabel];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Styling (Column Widths)
+    if (!ws['!cols']) ws['!cols'] = [];
+    data.headers.forEach((_, i) => ws['!cols']![i] = { wch: 25 });
+
+    // Merge title cells
+    if (!ws['!merges']) ws['!merges'] = [];
+    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: data.headers.length - 1 } });
+
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, `${reportName || 'report'}_premium_export.xlsx`);
+  };
+
+  const NavItem = ({ tab, icon: Icon, label }: { tab: Tab; icon: any; label: string }) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={cn(
+        "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium group",
+        activeTab === tab 
+          ? "bg-brand-turquoise/10 text-brand-turquoise shadow-sm" 
+          : "text-slate-500 hover:bg-slate-50 hover:text-brand-dark"
+      )}
+    >
+      <Icon size={20} className={cn(activeTab === tab ? "text-brand-turquoise" : "text-slate-400 group-hover:text-brand-dark")} />
+      {isSidebarOpen && <span>{label}</span>}
+    </button>
+  );
+
+  if (!isLoggedIn) {
+    return (
+      <div className="h-screen w-full bg-brand-gray">
+        <Login onLogin={() => setIsLoggedIn(true)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-brand-gray overflow-hidden font-sans">
+      {/* Sidebar */}
+      <aside 
+        className={cn(
+          "bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-20 shadow-xl shadow-slate-200/50",
+          isSidebarOpen ? "w-72" : "w-20"
+        )}
+      >
+        <div className="p-6 flex items-center justify-between h-20">
+          {isSidebarOpen && (
+            <div className="flex flex-col">
+              <span className="font-bold text-lg text-brand-dark tracking-tight leading-none">TSV Intelligence</span>
+              <span className="text-xs text-brand-turquoise font-bold tracking-widest uppercase">PRO EDITION</span>
+            </div>
+          )}
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-brand-dark transition-colors">
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2 mt-4">
+          <NavItem tab="upload" icon={UploadCloud} label="Carga de Datos" />
+          <NavItem tab="viewer" icon={TableIcon} label="Visor Interactivo" />
+          <NavItem tab="dashboard" icon={LayoutDashboard} label="Dashboard Ejecutivo" />
+          <NavItem tab="history" icon={Vault} label="Bóveda Histórica" />
+        </nav>
+
+        <div className="p-4 border-t border-slate-100 space-y-3">
+          {isSidebarOpen && (
+            <div className="flex items-center gap-3 px-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-brand-dark text-white flex items-center justify-center text-xs font-bold">
+                AD
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-brand-dark">Admin User</span>
+                <span className="text-xs text-slate-400">Empresa S.A.</span>
+              </div>
+            </div>
+          )}
+          
+          <button
+            onClick={() => setIsLoggedIn(false)}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors text-sm font-medium",
+              !isSidebarOpen && "justify-center px-0"
+            )}
+          >
+            <LogOut size={18} />
+            {isSidebarOpen && "Cerrar Sesión"}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        {/* Top Bar */}
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 z-10 sticky top-0">
+          <div>
+            <h2 className="text-xl font-bold text-brand-dark">
+              {activeTab === 'upload' && 'Nueva Lectura'}
+              {activeTab === 'viewer' && 'Explorador de Datos'}
+              {activeTab === 'dashboard' && 'Dashboard Ejecutivo'}
+              {activeTab === 'history' && 'Bóveda de Reportes'}
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">Gestión Inteligente de Datos TSV</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {data && (
+              <>
+                <button 
+                  onClick={handleExportExcel}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:border-brand-turquoise hover:text-brand-turquoise transition-all text-sm font-medium shadow-sm"
+                >
+                  <Download size={18} />
+                  <span className="hidden md:inline">Exportar Premium</span>
+                </button>
+
+                <button 
+                  onClick={() => setIsChatOpen(!isChatOpen)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-sm font-medium shadow-sm",
+                    isChatOpen 
+                      ? "bg-brand-turquoise/10 border-brand-turquoise text-brand-turquoise" 
+                      : "bg-white border-slate-200 text-slate-600 hover:border-brand-turquoise/50"
+                  )}
+                >
+                  <MessageSquare size={18} />
+                  <span className="hidden md:inline">Asistente IA</span>
+                </button>
+
+                <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
+                <div className="flex items-center gap-2">
+                    <input 
+                        type="text" 
+                        value={reportName}
+                        onChange={(e) => setReportName(e.target.value)}
+                        placeholder="Nombre del Reporte"
+                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-brand-turquoise w-40"
+                    />
+                    <button 
+                    onClick={handleFinishAndSave}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl bg-brand-turquoise text-white hover:brightness-105 transition-all text-sm font-bold shadow-lg shadow-brand-turquoise/20"
+                    >
+                    <Save size={18} />
+                    <span className="hidden md:inline">Guardar</span>
+                    </button>
+                </div>
+              </>
+            )}
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto p-8 relative">
+          <AnimatePresence mode="wait">
+            {activeTab === 'upload' && (
+              <motion.div 
+                key="upload"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="max-w-2xl mx-auto mt-12"
+              >
+                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 text-center">
+                  <div className="w-16 h-16 bg-brand-turquoise/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-brand-turquoise">
+                    <Database size={32} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-brand-dark mb-2">Carga de Reportes</h3>
+                  <p className="text-slate-500 mb-8 max-w-md mx-auto">Sube tus archivos .tsv, .csv o .xlsx para un análisis empresarial instantáneo. Procesamiento 100% local y seguro.</p>
+                  
+                  <div className="mb-6 max-w-sm mx-auto">
+                    <label className="block text-sm font-medium text-slate-700 mb-2 text-left">🏷️ Alias del Reporte (Opcional)</label>
+                    <input 
+                      type="text" 
+                      value={reportName}
+                      onChange={(e) => setReportName(e.target.value)}
+                      placeholder="Ej: Reporte Mensual Marzo"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 outline-none transition-all text-sm"
+                    />
+                  </div>
+
+                  <FileUpload onFileUpload={handleFileUpload} className="border-brand-turquoise/30 hover:border-brand-turquoise bg-slate-50/50" />
+                  
+                  {isLoading && (
+                    <div className="mt-8 flex flex-col items-center gap-3 text-brand-turquoise">
+                      <Loader2 className="animate-spin" size={32} />
+                      <span className="font-medium text-brand-dark">Analizando datos...</span>
+                    </div>
+                  )}
+                  {error && (
+                    <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 text-sm font-medium text-left">
+                      <AlertCircle size={20} className="flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'viewer' && data && (
+              <motion.div 
+                key="viewer"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full"
+              >
+                <DataTable 
+                  data={data.rows} 
+                  headers={data.headers} 
+                  fileName={data.fileName}
+                  onReset={() => setActiveTab('upload')}
+                  columnTotals={data.stats.columnTotals}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === 'dashboard' && data && (
+              <motion.div 
+                key="dashboard"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <Dashboard stats={data.stats} />
+              </motion.div>
+            )}
+
+            {activeTab === 'history' && (
+              <motion.div 
+                key="history"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="max-w-5xl mx-auto"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {historyFiles.length > 0 ? (
+                    historyFiles.map((file) => (
+                      <div 
+                        key={file.id}
+                        onClick={() => loadFromHistory(file)}
+                        className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-turquoise hover:shadow-lg hover:shadow-brand-turquoise/10 transition-all cursor-pointer group relative flex flex-col h-full"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 bg-brand-gray text-slate-500 rounded-xl group-hover:bg-brand-turquoise group-hover:text-white transition-colors">
+                            <CheckCircle size={24} />
+                          </div>
+                          <button 
+                            onClick={(e) => handleDeleteHistory(file.id, e)}
+                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+                        
+                        <h3 className="font-bold text-brand-dark text-lg mb-1 truncate" title={file.name}>{file.name}</h3>
+                        <p className="text-xs text-slate-400 mb-4">ID: {file.id.slice(0, 8)}...</p>
+                        
+                        <div className="mt-auto flex items-center gap-3 pt-4 border-t border-slate-50">
+                          <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
+                            {new Date(file.date).toLocaleDateString()}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-brand-turquoise/10 text-teal-700 text-xs font-medium">
+                            {file.data.length.toLocaleString()} filas
+                          </span>
+                        </div>
+                        <div className="mt-3 w-full py-2 bg-brand-gray text-center rounded-lg text-xs font-semibold text-slate-500 group-hover:bg-brand-turquoise group-hover:text-white transition-colors">
+                            Volver a Visualizar
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-20 text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200">
+                      <History size={64} className="mx-auto mb-4 opacity-20" />
+                      <p className="text-lg font-medium">La bóveda está vacía</p>
+                      <p className="text-sm opacity-70">Los reportes guardados aparecerán aquí.</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+            
+            {/* Empty States for Viewer/Dashboard if no data */}
+            {(!data && (activeTab === 'viewer' || activeTab === 'dashboard')) && (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                  <UploadCloud size={40} className="opacity-40" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">Sin datos para mostrar</h3>
+                <p className="max-w-xs text-center mb-8">Carga un archivo o selecciona uno de la bóveda para visualizar esta sección.</p>
+                <button 
+                  onClick={() => setActiveTab('upload')}
+                  className="px-6 py-3 bg-brand-dark text-white rounded-xl font-medium hover:bg-black transition-colors shadow-lg shadow-slate-200"
+                >
+                  Ir a Carga de Datos
+                </button>
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Chat Overlay */}
+        <AnimatePresence>
+          {isChatOpen && data && (
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute top-0 right-0 bottom-0 z-30 shadow-2xl"
+            >
+              <ChatAssistant dataSummary={data.summary} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}
