@@ -74,95 +74,65 @@ export default function App() {
         summary
       });
       
-      setReportName(prev => prev || fileName.split('.')[0]); // Use alias if set, else filename
+      setReportName(fileName.split('.')[0]); // Default report name
       setActiveTab('dashboard'); // Auto switch to dashboard
       setIsLoading(false);
   };
 
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        // Basic check for encoding issues (replacement characters)
-        if (text.includes('')) {
-           // Try reading as ISO-8859-1 if UTF-8 seems to fail
-           const isoReader = new FileReader();
-           isoReader.onload = (ev) => resolve(ev.target?.result as string);
-           isoReader.onerror = (err) => reject(err);
-           isoReader.readAsText(file, 'ISO-8859-1');
-        } else {
-           resolve(text);
-        }
-      };
-      reader.onerror = (err) => reject(err);
-      reader.readAsText(file, 'UTF-8');
-    });
-  };
-
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = (file: File) => {
     setIsLoading(true);
     setError(null);
 
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    try {
-      if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
-          const content = await readFileContent(file);
-          
-          Papa.parse(content, {
-            skipEmptyLines: true,
-            complete: async (results) => {
-              const rawData = results.data as string[][];
-              if (!rawData || rawData.length === 0) {
-                  setError("El archivo parece estar vacío.");
-                  setIsLoading(false);
-                  return;
-              }
-              // Trim headers
-              const headers = rawData[0].map(h => h.trim());
-              const rawRows = rawData.slice(1);
-              await processFileContent(headers, rawRows, file.name);
-            },
-            error: (err) => {
-              setError(`⚠️ Error al interpretar el archivo. Verifica que el formato sea correcto o que no esté protegido con contraseña.`);
-              setIsLoading(false);
+    if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
+        Papa.parse(file, {
+          delimiter: ext === 'csv' ? ',' : '\t',
+          skipEmptyLines: true,
+          complete: async (results) => {
+            const rawData = results.data as string[][];
+            if (!rawData || rawData.length === 0) {
+                setError("The file appears to be empty.");
+                setIsLoading(false);
+                return;
             }
-          });
-      } else if (ext === 'xlsx' || ext === 'xls') {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-              try {
-                  const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                  const workbook = XLSX.read(data, { type: 'array' });
-                  const firstSheetName = workbook.SheetNames[0];
-                  const worksheet = workbook.Sheets[firstSheetName];
-                  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                  
-                  if (!jsonData || jsonData.length === 0) {
-                      setError("El archivo parece estar vacío.");
-                      setIsLoading(false);
-                      return;
-                  }
+            const headers = rawData[0];
+            const rawRows = rawData.slice(1);
+            await processFileContent(headers, rawRows, file.name);
+          },
+          error: (err) => {
+            setError(`Error parsing file: ${err.message}`);
+            setIsLoading(false);
+          }
+        });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (!jsonData || jsonData.length === 0) {
+                    setError("The file appears to be empty.");
+                    setIsLoading(false);
+                    return;
+                }
 
-                  const rawHeaders = jsonData[0] as string[];
-                  // Trim headers
-                  const headers = rawHeaders.map(h => String(h).trim());
-                  const rawRows = jsonData.slice(1) as any[][];
-                  await processFileContent(headers, rawRows, file.name);
-              } catch (err) {
-                  setError(`⚠️ Error al interpretar el archivo. Verifica que el formato sea correcto o que no esté protegido con contraseña.`);
-                  setIsLoading(false);
-              }
-          };
-          reader.readAsArrayBuffer(file);
-      } else {
-          setError("Formato de archivo no soportado.");
-          setIsLoading(false);
-      }
-    } catch (err) {
-       setError(`⚠️ Error al interpretar el archivo. Verifica que el formato sea correcto o que no esté protegido con contraseña.`);
-       setIsLoading(false);
+                const headers = jsonData[0] as string[];
+                const rawRows = jsonData.slice(1) as any[][];
+                await processFileContent(headers, rawRows, file.name);
+            } catch (err) {
+                setError(`Error parsing Excel file: ${err}`);
+                setIsLoading(false);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        setError("Unsupported file format.");
+        setIsLoading(false);
     }
   };
 
@@ -399,17 +369,6 @@ export default function App() {
                   <h3 className="text-2xl font-bold text-brand-dark mb-2">Carga de Reportes</h3>
                   <p className="text-slate-500 mb-8 max-w-md mx-auto">Sube tus archivos .tsv, .csv o .xlsx para un análisis empresarial instantáneo. Procesamiento 100% local y seguro.</p>
                   
-                  <div className="mb-6 max-w-sm mx-auto">
-                    <label className="block text-sm font-medium text-slate-700 mb-2 text-left">🏷️ Alias del Reporte (Opcional)</label>
-                    <input 
-                      type="text" 
-                      value={reportName}
-                      onChange={(e) => setReportName(e.target.value)}
-                      placeholder="Ej: Reporte Mensual Marzo"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 outline-none transition-all text-sm"
-                    />
-                  </div>
-
                   <FileUpload onFileUpload={handleFileUpload} className="border-brand-turquoise/30 hover:border-brand-turquoise bg-slate-50/50" />
                   
                   {isLoading && (

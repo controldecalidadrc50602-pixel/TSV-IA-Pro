@@ -38,17 +38,16 @@ export function processData(headers: string[], rows: string[][]): { processedRow
   const userIdx = headers.findIndex(h => h.toLowerCase().includes('usuario') || h.toLowerCase().includes('user') || h.toLowerCase().includes('id_usuario'));
   const channelIdx = headers.findIndex(h => h.toLowerCase().includes('canal') || h.toLowerCase().includes('channel'));
   const closeTimeIdx = headers.findIndex(h => h.toLowerCase().includes('cierre') || h.toLowerCase().includes('close'));
-  const startTimeIdx = headers.findIndex(h => h.toLowerCase().includes('inicio') || h.toLowerCase().includes('start'));
 
   // Identify Duration Columns (Time vs Count Logic)
   const durationIndices = headers.map((h, i) => {
     const lower = h.toLowerCase();
     // Explicitly include 'total de conversación' and exclude count columns
-    const isTime = (lower.includes('tiempo') || lower.includes('espera') || lower.includes('duración') || lower.includes('duration') || lower.includes('total de conversación') || lower.includes('conversación') || lower.includes('respuesta'));
+    const isTime = (lower.includes('tiempo') || lower.includes('espera') || lower.includes('duración') || lower.includes('duration') || lower.includes('total de conversación'));
     const isCount = (lower.startsWith('cantidad') || lower.startsWith('total de mensajes') || lower.includes('transferencias'));
     
     // STRICT RULE: Date and Time columns are NOT duration columns
-    const isDateOrTime = i === dateIdx || i === timeIdx || i === closeTimeIdx || i === startTimeIdx;
+    const isDateOrTime = i === dateIdx || i === timeIdx || i === closeTimeIdx;
 
     return (isTime && !isCount && !isDateOrTime) ? i : -1;
   }).filter(i => i !== -1);
@@ -58,7 +57,7 @@ export function processData(headers: string[], rows: string[][]): { processedRow
       const lower = h.toLowerCase();
       // Include duration columns here too to sum them up in seconds first
       // STRICT RULE: Date, Time, and ID columns are NOT numeric columns for summing
-      const isDateOrTimeOrUser = i === dateIdx || i === timeIdx || i === userIdx || i === closeTimeIdx || i === startTimeIdx;
+      const isDateOrTimeOrUser = i === dateIdx || i === timeIdx || i === userIdx || i === closeTimeIdx;
       
       const isCount = lower.startsWith('cantidad') || lower.startsWith('total') || lower.includes('transferencias');
       
@@ -72,10 +71,6 @@ export function processData(headers: string[], rows: string[][]): { processedRow
   const channelMap = new Map<string, number>();
   const numericValues: Record<string, number[]> = {};
 
-  // Identify all potential columns that might contain time info for the dashboard
-  // Priority: 'Fecha/tiempo Inicio Sesión' (startTimeIdx) -> 'Hora Sesión' (timeIdx) -> 'Fecha/tiempo Cierre' (closeTimeIdx) -> Others
-  const potentialTimeIndices = [startTimeIdx, timeIdx, closeTimeIdx].filter(i => i !== -1);
-
   // Initialize hours map 00-23
   for (let i = 0; i < 24; i++) {
       hoursMap.set(String(i).padStart(2, '0'), 0);
@@ -83,7 +78,6 @@ export function processData(headers: string[], rows: string[][]): { processedRow
 
   rows.forEach((row, rowIndex) => {
     const rowObj: ProcessedRow = { id: `row-${rowIndex}` };
-    let hourExtracted = false;
     
     headers.forEach((header, colIndex) => {
       let value = row[colIndex];
@@ -108,68 +102,54 @@ export function processData(headers: string[], rows: string[][]): { processedRow
       }
 
       // Time Formatting (HH:mm) - Extract Hour for Stats
-      // Logic: Try 'Fecha/tiempo Inicio Sesión' first, then 'Hora Sesión', then 'Fecha/tiempo Cierre'
-      // We check if the current column is one of the potential time indices and if we haven't extracted an hour yet.
-      // However, we are iterating columns. So we need to be careful.
-      // Better approach: Check specifically if this column is the BEST candidate available for this row.
+      // Logic: Try 'Hora Sesión' first, then 'Fecha/tiempo Cierre' if needed for stats
+      let hourExtracted = false;
       
-      // If this column is a time column, try to extract hour
-      if (potentialTimeIndices.includes(colIndex) && value && value !== '0') {
-          // Only extract if we haven't found a better source yet.
-          // Priority is implicit in potentialTimeIndices order: start > time > close.
-          // But we are iterating in column order.
-          // So, we should extract from ANY valid time column, but prefer Start Time if available.
-          // Let's simplify: If we find a valid hour in Start Time, use it and stop looking.
-          // If not, use Time, etc.
-          
-          // Since we are iterating, we can't easily "stop looking" across columns unless we check all columns for this row first.
-          // But we want to do it in one pass.
-          
-          // Strategy: Store extracted hour candidates and pick the best one after the loop?
-          // Or just prioritize: If it's Start Time, overwrite whatever we found.
-          
-          let hour = '';
-          if (value.includes(' ')) {
-              const parts = value.split(' ')[1]?.split(':');
-              if (parts && parts.length >= 1) hour = parts[0].padStart(2, '0');
-          } else if (value.includes(':')) {
-               const parts = value.split(':');
-               if (parts.length >= 1) hour = parts[0].padStart(2, '0');
-          } else if (!isNaN(Number(value)) && value.length <= 2) {
-              hour = value.padStart(2, '0');
-          }
+      if (colIndex === timeIdx && value && value !== '0') {
+        // Try to parse HH:mm or HH
+        let hour = '';
+        if (value.includes(':')) {
+           const parts = value.split(':');
+           if (parts.length >= 2) {
+             hour = parts[0].padStart(2, '0');
+             const minute = parts[1].padStart(2, '0');
+             displayValue = `${hour}:${minute}`;
+           }
+        } else if (!isNaN(Number(value)) && value.length <= 2) {
+            // Just the hour number
+            hour = value.padStart(2, '0');
+            displayValue = `${hour}:00`;
+        }
 
-          if (hour && !isNaN(Number(hour))) {
-              // If this is Start Time, definitely use it.
-              if (colIndex === startTimeIdx) {
-                   // If we already incremented for another column, decrement it? No, that's messy.
-                   // Let's just set a flag on the rowObj and process hours AFTER the column loop.
-                   rowObj._extractedHour = hour;
-                   rowObj._hourPriority = 1;
-              } else if (colIndex === timeIdx && (!rowObj._hourPriority || rowObj._hourPriority > 2)) {
-                   rowObj._extractedHour = hour;
-                   rowObj._hourPriority = 2;
-              } else if (colIndex === closeTimeIdx && (!rowObj._hourPriority || rowObj._hourPriority > 3)) {
-                   rowObj._extractedHour = hour;
-                   rowObj._hourPriority = 3;
-              } else if (!rowObj._extractedHour) {
-                   // Fallback
-                   rowObj._extractedHour = hour;
-                   rowObj._hourPriority = 4;
+        if (hour && !isNaN(Number(hour))) {
+            hoursMap.set(hour, (hoursMap.get(hour) || 0) + 1);
+            hourExtracted = true;
+        }
+      }
+
+      // Fallback for Hour Stats: Use Close Time if Time column didn't yield an hour
+      // This is a bit tricky because we iterate columns. 
+      // Instead, let's check closeTimeIdx if we haven't found an hour yet for this row?
+      // Actually, simpler: just check closeTimeIdx independently if timeIdx didn't work.
+      // But we are inside the loop. Let's just process closeTimeIdx for stats if timeIdx is missing or empty.
+      
+      if (colIndex === closeTimeIdx && value && value !== '0') {
+          // If we haven't extracted hour from timeIdx (or timeIdx doesn't exist), try here
+          // But we don't know if timeIdx exists/works yet.
+          // Let's just collect hours from here if timeIdx is -1.
+          if (timeIdx === -1) {
+              let hour = '';
+              if (value.includes(' ')) {
+                  const parts = value.split(' ')[1]?.split(':');
+                  if (parts && parts.length >= 1) hour = parts[0].padStart(2, '0');
+              } else if (value.includes(':')) {
+                   const parts = value.split(':');
+                   if (parts.length >= 1) hour = parts[0].padStart(2, '0');
               }
-          }
-          
-          // Format display value for Time column specifically
-          if (colIndex === timeIdx) {
-             if (hour) {
-                 // Try to get minutes
-                 let minute = '00';
-                 if (value.includes(':')) {
-                     const parts = value.split(':');
-                     if (parts.length >= 2) minute = parts[1].padStart(2, '0');
-                 }
-                 displayValue = `${hour}:${minute}`;
-             }
+              
+              if (hour && !isNaN(Number(hour))) {
+                  hoursMap.set(hour, (hoursMap.get(hour) || 0) + 1);
+              }
           }
       }
 
@@ -212,12 +192,6 @@ export function processData(headers: string[], rows: string[][]): { processedRow
 
       rowObj[header] = displayValue;
     });
-
-    // Process extracted hour for stats
-    if (rowObj._extractedHour) {
-        const hour = String(rowObj._extractedHour);
-        hoursMap.set(hour, (hoursMap.get(hour) || 0) + 1);
-    }
 
     processedRows.push(rowObj);
   });
