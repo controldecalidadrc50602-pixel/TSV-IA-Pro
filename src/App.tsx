@@ -58,7 +58,13 @@ export default function App() {
   const loadHistory = async () => {
     try {
       const files = await getFiles();
-      setHistoryFiles(files.reverse()); // Newest first
+      const sorted = files.reverse();
+      setHistoryFiles(sorted); // Newest first
+      
+      // Auto-load last file if none loaded
+      if (!data && sorted.length > 0 && activeTab === 'upload') {
+        loadFromHistory(sorted[0]);
+      }
     } catch (err) {
       console.error("Failed to load history", err);
     }
@@ -195,7 +201,7 @@ export default function App() {
     }
   };
 
-  const loadFromHistory = (file: any) => {
+  const loadFromHistory = (file: any, targetTab: Tab = 'dashboard') => {
     const { processedRows, stats } = processData(file.headers, file.data);
     const summary = generateDataSummary(file.headers, file.data, stats);
     
@@ -207,7 +213,7 @@ export default function App() {
       summary
     });
     setReportName(file.name);
-    setActiveTab('dashboard');
+    setActiveTab(targetTab);
   };
 
   const handleDeleteHistory = async (id: string, e: React.MouseEvent) => {
@@ -339,6 +345,7 @@ export default function App() {
           </SidebarGroup>
 
           <SidebarGroup label="Analytics" id="analytics" icon={LayoutDashboard}>
+            <NavItem tab="dashboard" icon={LayoutDashboard} label="Live Dashboard" active={activeTab === 'dashboard'} />
             <NavItem tab="presentation" icon={Presentation} label="Modo Presentación" active={activeTab === 'presentation'} />
             <NavItem tab="history" icon={Vault} label="Bóveda de Datos" active={activeTab === 'history'} />
           </SidebarGroup>
@@ -551,34 +558,43 @@ export default function App() {
                     historyFiles.map((file) => (
                       <div 
                         key={file.id}
-                        onClick={() => loadFromHistory(file)}
-                        className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-turquoise hover:shadow-lg hover:shadow-brand-turquoise/10 transition-all cursor-pointer group relative flex flex-col h-full"
+                        className="bg-white dark:bg-dark-card p-5 rounded-3xl border border-slate-100 dark:border-dark-border hover:border-brand-turquoise hover:shadow-xl hover:shadow-brand-turquoise/5 transition-all group relative flex flex-col h-full"
                       >
                         <div className="flex items-start justify-between mb-4">
-                          <div className="p-3 bg-brand-gray text-slate-500 rounded-xl group-hover:bg-brand-turquoise group-hover:text-white transition-colors">
-                            <CheckCircle size={24} />
+                          <div className="p-3 bg-brand-gray dark:bg-slate-800 text-slate-500 rounded-2xl group-hover:bg-brand-turquoise group-hover:text-white transition-colors">
+                            <TableIcon size={24} />
                           </div>
                           <button 
                             onClick={(e) => handleDeleteHistory(file.id, e)}
-                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           >
                             <X size={18} />
                           </button>
                         </div>
                         
-                        <h3 className="font-bold text-brand-dark text-lg mb-1 truncate" title={file.name}>{file.name}</h3>
-                        <p className="text-xs text-slate-400 mb-4">ID: {file.id.slice(0, 8)}...</p>
+                        <h3 className="font-bold text-brand-dark dark:text-white text-lg mb-1 truncate" title={file.name}>{file.name}</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Reporte ID: {file.id.slice(0, 8)}</p>
                         
-                        <div className="mt-auto flex items-center gap-3 pt-4 border-t border-slate-50">
-                          <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
-                            {new Date(file.date).toLocaleDateString()}
-                          </span>
-                          <span className="px-2.5 py-1 rounded-md bg-brand-turquoise/10 text-teal-700 text-xs font-medium">
-                            {file.data.length.toLocaleString()} filas
-                          </span>
-                        </div>
-                        <div className="mt-3 w-full py-2 bg-brand-gray text-center rounded-lg text-xs font-semibold text-slate-500 group-hover:bg-brand-turquoise group-hover:text-white transition-colors">
-                            Volver a Visualizar
+                        <div className="mt-auto space-y-2 pt-4 border-t border-slate-50 dark:border-dark-border/50">
+                           <div className="flex items-center justify-between mb-4">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">{new Date(file.date).toLocaleDateString()}</span>
+                              <span className="text-[10px] font-bold text-brand-turquoise uppercase">{file.data.length} Filas</span>
+                           </div>
+                           
+                           <div className="grid grid-cols-2 gap-2">
+                               <button 
+                                onClick={() => loadFromHistory(file, 'dashboard')}
+                                className="flex items-center justify-center gap-2 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-brand-turquoise hover:text-white text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+                               >
+                                  <LayoutDashboard size={14} /> Dashboard
+                               </button>
+                               <button 
+                                onClick={() => loadFromHistory(file, 'presentation')}
+                                className="flex items-center justify-center gap-2 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-brand-turquoise hover:text-white text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+                               >
+                                  <Presentation size={14} /> Presentar
+                               </button>
+                           </div>
                         </div>
                       </div>
                     ))

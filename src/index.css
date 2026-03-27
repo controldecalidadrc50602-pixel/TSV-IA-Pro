@@ -30,3 +30,30 @@
 body {
   @apply antialiased bg-brand-gray text-brand-text selection:bg-teal-100 selection:text-teal-900;
 }
+
+/* Estilos de Impresión para Modo Presentación */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #root, #root * {
+    visibility: visible;
+  }
+  .no-print, aside, header, .chat-overlay, .sidebar-toggle, button {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100vh !important;
+  }
+  .bg-slate-900 {
+    background: white !important;
+    color: black !important;
+    border: none !important;
+  }
+  .text-white { color: #0f172a !important; }
+  .text-slate-300, .text-slate-400 { color: #475569 !important; }
+  .bg-brand-turquoise/10 { background: #f1f5f9 !important; }
+  .border-brand-turquoise/20 { border-color: #e2e8f0 !important; }
+}

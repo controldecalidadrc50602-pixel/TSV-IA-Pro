@@ -160,8 +160,19 @@ export function PresentationMode({ stats, insights, onBack }: PresentationModePr
         </div>
 
         <div className="flex items-center gap-3">
-           <button className="p-3 bg-white/5 text-white rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
-              <Download size={20} />
+           <button 
+             onClick={() => window.print()} 
+             className="px-4 py-2.5 bg-white/5 text-white rounded-xl border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-2 text-xs font-bold"
+             title="Exportar a PDF"
+           >
+              <Download size={16} /> PDF
+           </button>
+           <button 
+             onClick={() => alert('Generando PPTX... Esta función requiere la librería PptxGenJS (Elite Add-on)')}
+             className="px-4 py-2.5 bg-brand-turquoise/20 text-brand-turquoise rounded-xl border border-brand-turquoise/30 hover:bg-brand-turquoise/30 transition-colors flex items-center gap-2 text-xs font-bold"
+             title="Exportar a PPTX"
+           >
+              <Presentation size={16} /> PPTX
            </button>
         </div>
       </div>
