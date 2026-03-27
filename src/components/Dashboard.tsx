@@ -45,6 +45,11 @@ export function Dashboard({ stats, insights }: DashboardProps) {
             <span className="text-slate-400 text-xs font-medium">{stats.dateRange}</span>
           </div>
           <h2 className="text-3xl font-black text-brand-dark dark:text-white tracking-tight italic">Executive Insight Dashboard</h2>
+          {stats.peakHour && (
+            <p className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest mt-1">
+              🔥 Hora Pico Proyectada: {stats.peakHour.hour}:00 ({stats.peakHour.count} sesiones)
+            </p>
+          )}
         </div>
         
         {insights && (
@@ -61,34 +66,34 @@ export function Dashboard({ stats, insights }: DashboardProps) {
         )}
       </div>
 
-      {/* KPI Rejilla Superior */}
+      {/* KPI Rejilla Superior - Expandida */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
-          icon={MessageSquare} 
-          label="Total Interacciones" 
-          value={stats.totalSessions.toLocaleString()} 
-          color="bg-brand-turquoise"
+          icon={TrendingUp} 
+          label="SLA Compliance" 
+          value={`${(stats.slaCompliance || 0).toFixed(1)}%`} 
+          color={stats.slaCompliance && stats.slaCompliance > 80 ? "bg-emerald-500" : "bg-amber-500"}
           delay={0.1}
         />
         <KpiCard 
-          icon={Users} 
-          label="Agentes/Usuarios" 
-          value={stats.uniqueUsers.toLocaleString()} 
-          color="bg-slate-900"
+          icon={Sparkles} 
+          label="Tasa Resolución Directa" 
+          value={`${(stats.botSuccessRate || 0).toFixed(1)}%`} 
+          color="bg-brand-turquoise"
           delay={0.2}
         />
         <KpiCard 
           icon={Clock} 
           label="AHT Promedio" 
-          value={stats.avgDuration || "00:00"} 
+          value={stats.avgDuration || "-"} 
           color="bg-teal-500"
           delay={0.3}
         />
         <KpiCard 
-          icon={Globe} 
-          label="Canales Activos" 
-          value={stats.sessionsByChannel.length} 
-          color="bg-emerald-500"
+          icon={Hash} 
+          label="Índice de Eficiencia" 
+          value={`${(stats.efficiencyIndex || 0).toFixed(1)}%`} 
+          color="bg-slate-900"
           delay={0.4}
         />
       </div>

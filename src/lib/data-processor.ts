@@ -15,16 +15,20 @@ export interface DataStats {
   columnTotals: Record<string, number | string>;
   avgDuration?: string;
   totalDuration?: string;
+  slaCompliance?: number; // % of sessions within SLA
+  botSuccessRate?: number; // % of sessions resolved by bot
+  efficiencyIndex?: number; // Ratio talk/wait
+  peakHour?: { hour: string; count: number };
 }
 
 // Helper to format seconds to HHh MMm SSs
 export function formatDuration(seconds: number): string {
-  if (isNaN(seconds)) return '';
+  if (isNaN(seconds) || seconds === 0) return '-';
   
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-
+ 
   if (h > 0) {
     return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
   }
@@ -176,7 +180,9 @@ export function processData(headers: string[], rows: string[][]): { processedRow
            if (!numericValues[header]) numericValues[header] = [];
            numericValues[header].push(numVal);
            // Format as integer if it's a count
-           if (String(numVal).includes('.')) {
+           if (numVal === 0) {
+               displayValue = '-';
+           } else if (String(numVal).includes('.')) {
                displayValue = String(Math.round(numVal));
            }
         }
@@ -233,19 +239,41 @@ export function processData(headers: string[], rows: string[][]): { processedRow
     }
   });
 
-  // Calculate AHT (Average Handle Time) if duration columns exist
-  let totalDurSeconds = 0;
+  // Calculate AHT and Advanced Metrics
+  let totalTalkSeconds = 0;
+  let totalWaitSeconds = 0;
+  let slaCompliantCount = 0;
+  let botResolvedCount = 0;
   let durCount = 0;
-  Object.entries(numericValues).forEach(([key, values]) => {
-      const isDuration = headers.some((h, i) => h === key && durationIndices.includes(i));
-      if (isDuration) {
-          totalDurSeconds += values.reduce((a, b) => a + b, 0);
-          durCount += values.length;
-      }
+
+  const waitIdx = headers.findIndex(h => h.toLowerCase().includes('espera en cola'));
+  const agentWaitIdx = headers.findIndex(h => h.toLowerCase().includes('espera agente'));
+  const talkIdx = headers.findIndex(h => h.toLowerCase().includes('total de conversación'));
+
+  rows.forEach((row) => {
+      const waitTime = parseFloat(row[waitIdx]) || 0;
+      const agentWait = parseFloat(row[agentWaitIdx]) || 0;
+      const talkTime = parseFloat(row[talkIdx]) || 0;
+
+      if (waitTime <= 60) slaCompliantCount++;
+      if (agentWait === 0 && talkTime > 0) botResolvedCount++;
+      
+      totalTalkSeconds += talkTime;
+      totalWaitSeconds += (waitTime + agentWait);
+      if (talkTime > 0 || waitTime > 0) durCount++;
   });
 
-  const avgDuration = durCount > 0 ? formatDuration(totalDurSeconds / durCount) : '00m 00s';
-  const totalDuration = formatDuration(totalDurSeconds);
+  const avgDuration = durCount > 0 ? formatDuration(totalTalkSeconds / durCount) : '-';
+  const totalDuration = formatDuration(totalTalkSeconds);
+  const slaCompliance = rows.length > 0 ? (slaCompliantCount / rows.length) * 100 : 0;
+  const botSuccessRate = rows.length > 0 ? (botResolvedCount / rows.length) * 100 : 0;
+  const efficiencyIndex = (totalTalkSeconds + totalWaitSeconds) > 0 
+    ? (totalTalkSeconds / (totalTalkSeconds + totalWaitSeconds)) * 100 
+    : 0;
+
+  const peakHour = sessionsByHour.length > 0 
+    ? sessionsByHour.reduce((prev, current) => (prev.count > current.count) ? prev : current)
+    : undefined;
 
   return {
     processedRows,
@@ -258,7 +286,11 @@ export function processData(headers: string[], rows: string[][]): { processedRow
       numericStats,
       columnTotals,
       avgDuration,
-      totalDuration
+      totalDuration,
+      slaCompliance,
+      botSuccessRate,
+      efficiencyIndex,
+      peakHour
     },
     formattedHeaders: headers
   };
@@ -284,6 +316,12 @@ ${stats.sessionsByChannel.slice(0, 5).map(c => `- ${c.channel}: ${c.count}`).joi
 
 Numeric Statistics:
 ${numericSummary}
+
+Advanced Insights:
+- SLA Compliance: ${stats.slaCompliance?.toFixed(1)}%
+- Bot Success Rate: ${stats.botSuccessRate?.toFixed(1)}%
+- Efficiency Index: ${stats.efficiencyIndex?.toFixed(1)}%
+${stats.peakHour ? `- Peak Hour: ${stats.peakHour.hour}:00 with ${stats.peakHour.count} sessions` : ''}
 
 Sample Data (First 3 rows):
 ${sampleRows}
