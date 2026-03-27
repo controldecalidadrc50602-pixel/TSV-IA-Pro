@@ -53,6 +53,19 @@ export function parseTimeToSeconds(value: string): number {
   return isNaN(num) ? 0 : num;
 }
 
+// Robust header detection
+const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const isTimeHeader = (h: string) => {
+    const n = normalize(h);
+    return n.includes('tiempo') || n.includes('espera') || n.includes('duracion') || n.includes('duration') || n.includes('conversacion');
+};
+
+const isCountHeader = (h: string) => {
+    const n = normalize(h);
+    return n.startsWith('cantidad') || n.startsWith('total') || n.includes('transferencias') || n.includes('respuestas') || n.includes('sesiones');
+};
+
 // Helper to format seconds to HHh MMm SSs
 export function formatDuration(seconds: number): string {
   if (isNaN(seconds) || seconds <= 0) return '-';
@@ -70,7 +83,8 @@ export function formatDuration(seconds: number): string {
   return '00s';
 }
 
-export function processData(headers: string[], rows: string[][]): { processedRows: ProcessedRow[], stats: DataStats, formattedHeaders: string[] } {
+export function processData(headersRaw: string[], rows: string[][]): { processedRows: ProcessedRow[], stats: DataStats, formattedHeaders: string[] } {
+  const headers = headersRaw.map(h => h.trim());
   const processedRows: ProcessedRow[] = [];
   
   // Indices for specific columns
@@ -85,32 +99,19 @@ export function processData(headers: string[], rows: string[][]): { processedRow
   const colaIdx = headers.findIndex(h => h.toLowerCase().includes('cola de atención') || h.toLowerCase().includes('cola') || h.toLowerCase().includes('queue'));
   const statusIdx = headers.findIndex(h => h.toLowerCase().includes('estado') || h.toLowerCase().includes('status'));
   const transfersIdx = headers.findIndex(h => h.toLowerCase().includes('transferencias recibidas') || h.toLowerCase().includes('transferencia'));
-  const responsesIdx = headers.findIndex(h => h.toLowerCase().includes('cantidad de respuesta') || h.toLowerCase().includes('respuestas'));
-
-  // Identify Duration Columns (Time vs Count Logic)
+  const responsesIdx = headers.findIndex(h => h.toLowerCase().includes('cantidad de respuesta') || h.toLowerCase().includes('respuestas'));  // Identify Duration Columns
   const durationIndices = headers.map((h, i) => {
-    const lower = h.toLowerCase();
-    // Broaden detection for time columns
-    const isDurationLabel = lower.includes('tiempo') || lower.includes('espera') || lower.includes('duración') || lower.includes('duration') || lower.includes('conversación');
-    const isCount = (lower.startsWith('cantidad') || lower.startsWith('total de mensajes') || lower.includes('transferencias'));
-    const isLink = lower.includes('link') || lower.includes('url');
+    if (i === dateIdx || i === timeIdx || i === closeTimeIdx) return -1;
+    if (normalize(h).includes('link') || normalize(h).includes('url')) return -1;
     
-    // STRICT RULE: Date, Time and Link columns are NOT duration columns
-    const isDateOrTime = i === dateIdx || i === timeIdx || i === closeTimeIdx || isLink;
-
-    return (isDurationLabel && !isCount && !isDateOrTime) ? i : -1;
+    return (isTimeHeader(h) && !isCountHeader(h)) ? i : -1;
   }).filter(i => i !== -1);
 
   // Identify Count/Numeric Columns for Totals
   const numericIndices = headers.map((h, i) => {
-      const lower = h.toLowerCase();
-      // Include duration columns here too to sum them up in seconds first
-      // STRICT RULE: Date, Time, and ID columns are NOT numeric columns for summing
-      const isDateOrTimeOrUser = i === dateIdx || i === timeIdx || i === userIdx || i === closeTimeIdx;
-      
-      const isCount = lower.startsWith('cantidad') || lower.startsWith('total') || lower.includes('transferencias');
-      
-      return (!isDateOrTimeOrUser && (durationIndices.includes(i) || isCount)) ? i : -1;
+    if (i === dateIdx || i === timeIdx || i === userIdx || i === closeTimeIdx) return -1;
+    
+    return (durationIndices.includes(i) || isCountHeader(h)) ? i : -1;
   }).filter(i => i !== -1);
 
   // Stats aggregators

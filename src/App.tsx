@@ -78,15 +78,15 @@ export default function App() {
       }));
 
       // Process Data (Clean, Format Dates, Stats)
-      const { processedRows, stats } = processData(headers, stringRows);
+      const { processedRows, stats, formattedHeaders } = processData(headers, stringRows);
       
       // Convert back to string[][] for DataTable (keeping formatting)
-      const rows = processedRows.map(r => headers.map(h => String(r[h])));
+      const rows = processedRows.map(r => formattedHeaders.map(h => String(r[h])));
       
-      const summary = generateDataSummary(headers, rows, stats);
+      const summary = generateDataSummary(formattedHeaders, rows, stats);
 
       setData({
-        headers,
+        headers: formattedHeaders,
         rows,
         fileName,
         stats,
@@ -202,12 +202,12 @@ export default function App() {
   };
 
   const loadFromHistory = (file: any, targetTab: Tab = 'dashboard') => {
-    const { processedRows, stats } = processData(file.headers, file.data);
-    const summary = generateDataSummary(file.headers, file.data, stats);
+    const { processedRows, stats, formattedHeaders } = processData(file.headers, file.data);
+    const summary = generateDataSummary(formattedHeaders, file.data, stats);
     
     setData({
-      headers: file.headers,
-      rows: file.data,
+      headers: formattedHeaders,
+      rows: file.data, // This stays formatted from history entry
       fileName: file.name,
       stats,
       summary
