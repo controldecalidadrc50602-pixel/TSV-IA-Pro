@@ -26,9 +26,36 @@ export interface DataStats {
   totalResponses: number;
 }
 
+// Helper to convert HH:MM:SS or SS to seconds
+export function parseTimeToSeconds(value: string): number {
+  if (!value || value === '-') return 0;
+  value = String(value).trim();
+  
+  // Handle HH:MM:SS or MM:SS
+  if (value.includes(':')) {
+    const parts = value.split(':').map(Number);
+    if (parts.length === 3) { // HH:MM:SS
+      return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+    } else if (parts.length === 2) { // MM:SS
+      return (parts[0] * 60) + parts[1];
+    }
+  }
+  
+  // Handle HHh MMm SSs (if already partially formatted)
+  if (value.includes('h') || value.includes('m') || value.includes('s')) {
+      const h = parseInt(value.match(/(\d+)h/)?.[1] || '0');
+      const m = parseInt(value.match(/(\d+)m/)?.[1] || '0');
+      const s = parseInt(value.match(/(\d+)s/)?.[1] || '0');
+      return (h * 3600) + (m * 60) + s;
+  }
+
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+}
+
 // Helper to format seconds to HHh MMm SSs
 export function formatDuration(seconds: number): string {
-  if (isNaN(seconds) || seconds === 0) return '-';
+  if (isNaN(seconds) || seconds <= 0) return '-';
   
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -37,7 +64,10 @@ export function formatDuration(seconds: number): string {
   if (h > 0) {
     return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
   }
-  return `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  if (m > 0 || s > 0) {
+    return `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  }
+  return '00s';
 }
 
 export function processData(headers: string[], rows: string[][]): { processedRows: ProcessedRow[], stats: DataStats, formattedHeaders: string[] } {
@@ -60,14 +90,15 @@ export function processData(headers: string[], rows: string[][]): { processedRow
   // Identify Duration Columns (Time vs Count Logic)
   const durationIndices = headers.map((h, i) => {
     const lower = h.toLowerCase();
-    // Explicitly include 'total de conversación' and exclude count columns
-    const isTime = (lower.includes('tiempo') || lower.includes('espera') || lower.includes('duración') || lower.includes('duration') || lower.includes('total de conversación'));
+    // Broaden detection for time columns
+    const isDurationLabel = lower.includes('tiempo') || lower.includes('espera') || lower.includes('duración') || lower.includes('duration') || lower.includes('conversación');
     const isCount = (lower.startsWith('cantidad') || lower.startsWith('total de mensajes') || lower.includes('transferencias'));
+    const isLink = lower.includes('link') || lower.includes('url');
     
-    // STRICT RULE: Date and Time columns are NOT duration columns
-    const isDateOrTime = i === dateIdx || i === timeIdx || i === closeTimeIdx;
+    // STRICT RULE: Date, Time and Link columns are NOT duration columns
+    const isDateOrTime = i === dateIdx || i === timeIdx || i === closeTimeIdx || isLink;
 
-    return (isTime && !isCount && !isDateOrTime) ? i : -1;
+    return (isDurationLabel && !isCount && !isDateOrTime) ? i : -1;
   }).filter(i => i !== -1);
 
   // Identify Count/Numeric Columns for Totals
@@ -178,17 +209,15 @@ export function processData(headers: string[], rows: string[][]): { processedRow
 
       // Smart Time Conversion
       if (durationIndices.includes(colIndex)) {
-        // Try to parse as number
-        const numVal = parseFloat(value);
-        if (!isNaN(numVal)) {
-          rowObj[`${header}_RAW`] = numVal; // Store raw for calculations
-          displayValue = formatDuration(numVal);
+        const seconds = parseTimeToSeconds(value);
+        if (seconds > 0 || value === '0') {
+          rowObj[`${header}_RAW`] = seconds;
+          displayValue = formatDuration(seconds);
           
-          // Add to numeric stats
           if (!numericValues[header]) numericValues[header] = [];
-          numericValues[header].push(numVal);
+          numericValues[header].push(seconds);
         } else {
-            displayValue = '-'; // Invalid number
+            displayValue = '-';
         }
       } else if (numericIndices.includes(colIndex)) {
         // Other numeric columns (Counts)
