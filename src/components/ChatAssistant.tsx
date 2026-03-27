@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Sparkles, Loader2, X } from 'lucide-react';
+import { Send, Bot, User, Loader2, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChatAssistantProps {
@@ -39,51 +38,41 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
     setIsLoading(true);
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error("API Key not found");
-
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const systemPrompt = `
-        Eres un experto analista de datos. Tienes acceso al siguiente resumen de un archivo TSV cargado por el usuario:
-        
-        ${dataSummary}
-        
-        Responde a las preguntas del usuario basándote en esta información. 
-        Si te preguntan algo que no puedes saber con el resumen proporcionado, explica amablemente que solo tienes acceso a estadísticas generales y una muestra de los datos.
-        Sé conciso, profesional y útil. Usa formato Markdown para tus respuestas.
-      `;
-
-      // Use chat model for better context handling
-      const chat = ai.chats.create({
-        model: "gemini-2.5-flash",
-        config: {
-            systemInstruction: systemPrompt,
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        history: messages.slice(1).map(m => ({
-            role: m.role,
-            parts: [{ text: m.content }]
-        }))
+        body: JSON.stringify({
+          messages: [...messages, { role: 'user', content: userMessage }],
+          systemPrompt: `
+            Eres un experto analista de datos Senior para una plataforma SaaS Enterprise. 
+            Tienes acceso al siguiente resumen de un archivo cargado:
+            ${dataSummary}
+            
+            Tu objetivo es proporcionar insights de alto nivel, detectar anomalías y sugerir visualizaciones.
+            Responde de forma profesional, concisa y usando Markdown.
+          `
+        })
       });
 
-      const response = await chat.sendMessage({
-        message: userMessage
-      });
+      if (!response.ok) throw new Error("Error en la respuesta del servidor");
 
-      const text = response.text || "Lo siento, no pude generar una respuesta.";
+      const data = await response.json();
+      const text = data.text || "Lo siento, no pude generar una respuesta.";
       
       setMessages(prev => [...prev, { role: 'model', content: text }]);
     } catch (error) {
-      console.error("Chat error:", error);
-      setMessages(prev => [...prev, { role: 'model', content: "Hubo un error al conectar con Gemini. Por favor verifica tu API Key." }]);
+       console.error("Chat error:", error);
+       setMessages(prev => [...prev, { role: 'model', content: "Hubo un error al conectar con el servidor de IA. Por favor verifica que el backend esté corriendo." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-slate-200 shadow-xl w-full md:w-[400px]">
-      <div className="p-4 border-b border-slate-200 bg-brand-dark text-white flex items-center justify-between">
+    <div className="flex flex-col h-full bg-white dark:bg-dark-card border-l border-slate-200 dark:border-dark-border shadow-xl w-full md:w-[400px] transition-colors">
+      <div className="p-4 border-b border-slate-200 dark:border-dark-border bg-brand-dark dark:bg-slate-900 text-white flex items-center justify-between transition-colors">
         <div className="flex items-center gap-2">
             <Sparkles size={20} className="text-brand-turquoise" />
             <h3 className="font-semibold">Asistente IA</h3>
@@ -95,7 +84,7 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-dark-bg/50 transition-colors">
         {messages.map((msg, idx) => (
           <div
             key={idx}
@@ -106,7 +95,7 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
           >
             <div className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-              msg.role === 'user' ? "bg-brand-dark/10 text-brand-dark" : "bg-brand-turquoise/10 text-brand-turquoise"
+              msg.role === 'user' ? "bg-brand-dark/10 dark:bg-brand-turquoise/20 text-brand-dark dark:text-brand-turquoise" : "bg-brand-turquoise/10 text-brand-turquoise"
             )}>
               {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
             </div>
@@ -114,7 +103,7 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
               "p-3 rounded-2xl text-sm shadow-sm",
               msg.role === 'user' 
                 ? "bg-brand-turquoise text-white rounded-tr-none" 
-                : "bg-white text-brand-text border border-slate-200 rounded-tl-none"
+                : "bg-white dark:bg-slate-800 text-brand-text dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-tl-none"
             )}>
               <ReactMarkdown>{msg.content}</ReactMarkdown>
             </div>
@@ -125,7 +114,7 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
              <div className="w-8 h-8 rounded-full bg-brand-turquoise/10 text-brand-turquoise flex items-center justify-center flex-shrink-0">
                <Bot size={16} />
              </div>
-             <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm">
+             <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none border border-slate-200 dark:border-slate-700 shadow-sm">
                <Loader2 className="animate-spin text-slate-400" size={16} />
              </div>
           </div>
@@ -133,7 +122,7 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-white border-t border-slate-200">
+      <div className="p-4 bg-white dark:bg-dark-card border-t border-slate-200 dark:border-dark-border transition-colors">
         <div className="flex gap-2">
           <input
             type="text"
@@ -141,7 +130,7 @@ export function ChatAssistant({ dataSummary, onClose }: ChatAssistantProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Pregunta sobre tus datos..."
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-turquoise focus:border-transparent text-sm"
+            className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-turquoise focus:border-transparent text-sm dark:text-white"
             disabled={isLoading}
           />
           <button

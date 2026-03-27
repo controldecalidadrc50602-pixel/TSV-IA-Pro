@@ -46,7 +46,7 @@ export function FileUpload({ onFileUpload, className }: FileUploadProps) {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       className={cn(
-        "border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center hover:border-brand-turquoise transition-all cursor-pointer bg-white hover:bg-slate-50 group",
+        "border-2 border-dashed border-slate-300 dark:border-dark-border rounded-2xl p-12 text-center hover:border-brand-turquoise transition-all cursor-pointer bg-white dark:bg-dark-card hover:bg-slate-50 dark:hover:bg-slate-800/50 group",
         className
       )}
     >
@@ -62,10 +62,10 @@ export function FileUpload({ onFileUpload, className }: FileUploadProps) {
           <Upload size={36} />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-brand-dark">Cargar Reporte</h3>
-          <p className="text-slate-500 mt-1">Arrastra o selecciona tu archivo</p>
+          <h3 className="text-xl font-bold text-brand-dark dark:text-white">Cargar Reporte</h3>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Arrastra o selecciona tu archivo</p>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400 mt-2 bg-slate-100 px-3 py-1.5 rounded-full">
+        <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500 mt-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full transition-colors">
           <FileText size={14} />
           <span>TSV</span>
           <span className="w-1 h-1 bg-slate-300 rounded-full"></span>

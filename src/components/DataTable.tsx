@@ -93,13 +93,13 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
   return (
     <div className="flex flex-col h-full gap-4 animate-in fade-in duration-500">
       {/* Header Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-dark-card p-4 rounded-xl shadow-sm border border-slate-200 dark:border-dark-border transition-colors">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-brand-turquoise/10 text-brand-turquoise rounded-lg">
             <FileText size={20} />
           </div>
           <div>
-            <h2 className="font-semibold text-brand-dark">{fileName}</h2>
+            <h2 className="font-semibold text-brand-dark dark:text-white">{fileName}</h2>
             <p className="text-sm text-slate-500">
               {filteredData.length.toLocaleString()} rows {filteredData.length !== data.length && `(filtered from ${data.length.toLocaleString()})`}
             </p>
@@ -109,7 +109,7 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
         <div className="flex items-center gap-3">
           <button
             onClick={onReset}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Upload New File
           </button>
@@ -117,13 +117,13 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
       </div>
 
       {/* Table Container */}
-      <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col">
+      <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm flex flex-col transition-colors">
         <div className="overflow-auto flex-1 relative">
           <table className="w-full text-left text-sm border-collapse">
-            <thead className="bg-slate-50 sticky top-0 z-20 shadow-sm">
+            <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-20 shadow-sm transition-colors">
               <tr>
                 {headers.map((header, index) => (
-                  <th key={index} className="p-4 font-semibold text-brand-dark border-b border-slate-200 min-w-[220px] bg-slate-50">
+                  <th key={index} className="p-4 font-semibold text-brand-dark dark:text-slate-200 border-b border-slate-200 dark:border-dark-border min-w-[220px] bg-slate-50 dark:bg-slate-900 transition-colors">
                     <div className="flex flex-col gap-2">
                       <div 
                         className="flex items-center justify-between cursor-pointer hover:text-brand-turquoise transition-colors select-none group"
@@ -145,7 +145,7 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
                           placeholder="Filtrar..."
                           value={filters[index] || ''}
                           onChange={(e) => handleFilterChange(index, e.target.value)}
-                          className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 bg-white transition-all"
+                          className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 bg-white dark:bg-slate-800 text-brand-dark dark:text-white transition-all"
                         />
                       </div>
                     </div>
@@ -154,7 +154,7 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
               </tr>
               {/* Totals Row */}
               {columnTotals && (
-                <tr className="bg-brand-turquoise/5 border-b-2 border-brand-turquoise/20 font-bold text-brand-dark sticky top-[105px] z-10">
+                <tr className="bg-brand-turquoise/5 dark:bg-brand-turquoise/10 border-b-2 border-brand-turquoise/20 font-bold text-brand-dark dark:text-white sticky top-[105px] z-10 transition-colors">
                   {headers.map((header, index) => (
                     <td key={index} className="p-3 text-xs uppercase tracking-wider">
                       {columnTotals[header] ? (
@@ -173,7 +173,7 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
             <tbody className="divide-y divide-slate-100">
               {paginatedData.length > 0 ? (
                 paginatedData.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="hover:bg-brand-turquoise/5 transition-colors even:bg-slate-50/50">
+                  <tr key={rowIndex} className="hover:bg-brand-turquoise/5 dark:hover:bg-brand-turquoise/10 transition-colors even:bg-slate-50/50 dark:even:bg-slate-800/30">
                     {headers.map((_, colIndex) => {
                       const cellValue = row[colIndex];
                       const isLink = colIndex === linkColIndex && cellValue && (cellValue.startsWith('http') || cellValue.startsWith('www'));
@@ -181,7 +181,7 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
                       
                       return (
                         <td key={colIndex} className={cn(
-                            "p-4 text-slate-700 whitespace-nowrap max-w-xs truncate",
+                            "p-4 text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-xs truncate",
                             isTime && "text-brand-turquoise font-medium"
                         )} title={String(cellValue)}>
                           {isLink ? (
@@ -213,8 +213,8 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
         </div>
 
         {/* Pagination Footer */}
-        <div className="border-t border-slate-200 p-3 bg-slate-50 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="border-t border-slate-200 dark:border-dark-border p-3 bg-slate-50 dark:bg-slate-900 flex items-center justify-between transition-colors">
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                 <span>Rows per page:</span>
                 <select 
                     value={rowsPerPage}
@@ -222,7 +222,7 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
                         setRowsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                     }}
-                    className="border border-slate-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-brand-turquoise"
+                    className="border border-slate-300 dark:border-slate-700 rounded px-2 py-1 bg-white dark:bg-slate-800 text-brand-dark dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-turquoise transition-all"
                 >
                     <option value={20}>20</option>
                     <option value={50}>50</option>
@@ -232,20 +232,20 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
             </div>
 
             <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600 mr-2">
+                <span className="text-sm text-slate-600 dark:text-slate-400 mr-2 transition-colors">
                     Page {currentPage} of {totalPages || 1}
                 </span>
                 <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600"
+                    className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 dark:text-slate-400"
                 >
                     <ChevronLeft size={20} />
                 </button>
                 <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages || totalPages === 0}
-                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600"
+                    className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 dark:text-slate-400"
                 >
                     <ChevronRight size={20} />
                 </button>

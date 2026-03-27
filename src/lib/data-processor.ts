@@ -13,6 +13,8 @@ export interface DataStats {
   sessionsByChannel: { channel: string; count: number }[];
   numericStats: Record<string, { min: number; max: number; mean: number; sum: number }>;
   columnTotals: Record<string, number | string>;
+  avgDuration?: string;
+  totalDuration?: string;
 }
 
 // Helper to format seconds to HHh MMm SSs
@@ -231,6 +233,20 @@ export function processData(headers: string[], rows: string[][]): { processedRow
     }
   });
 
+  // Calculate AHT (Average Handle Time) if duration columns exist
+  let totalDurSeconds = 0;
+  let durCount = 0;
+  Object.entries(numericValues).forEach(([key, values]) => {
+      const isDuration = headers.some((h, i) => h === key && durationIndices.includes(i));
+      if (isDuration) {
+          totalDurSeconds += values.reduce((a, b) => a + b, 0);
+          durCount += values.length;
+      }
+  });
+
+  const avgDuration = durCount > 0 ? formatDuration(totalDurSeconds / durCount) : '00m 00s';
+  const totalDuration = formatDuration(totalDurSeconds);
+
   return {
     processedRows,
     stats: {
@@ -240,7 +256,9 @@ export function processData(headers: string[], rows: string[][]): { processedRow
       sessionsByHour,
       sessionsByChannel,
       numericStats,
-      columnTotals
+      columnTotals,
+      avgDuration,
+      totalDuration
     },
     formattedHeaders: headers
   };

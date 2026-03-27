@@ -22,8 +22,8 @@ export function Login({ onLogin }: LoginProps) {
       <div className="w-16 h-16 bg-brand-turquoise/20 rounded-2xl flex items-center justify-center mb-6 text-brand-turquoise">
         <Lock size={32} />
       </div>
-      <h2 className="text-2xl font-bold text-brand-dark mb-2">Bienvenido</h2>
-      <p className="text-slate-500 mb-8 text-sm">Accede a TSV Intelligence Pro</p>
+      <h2 className="text-2xl font-bold text-brand-dark dark:text-white mb-2">Bienvenido</h2>
+      <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">Accede a TSV Intelligence Pro</p>
 
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <div className="relative">
@@ -33,7 +33,7 @@ export function Login({ onLogin }: LoginProps) {
             placeholder="Usuario / Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 transition-all text-sm"
+            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-xl focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 transition-all text-sm dark:text-white"
             required
           />
         </div>
@@ -44,7 +44,7 @@ export function Login({ onLogin }: LoginProps) {
             placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 transition-all text-sm"
+            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-xl focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 transition-all text-sm dark:text-white"
             required
           />
         </div>

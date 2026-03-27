@@ -22,6 +22,7 @@ interface ParsedData {
   fileName: string;
   stats: DataStats;
   summary: string;
+  insights?: string; // New field for AI insights
 }
 
 type Tab = 'upload' | 'viewer' | 'dashboard' | 'history';
@@ -29,13 +30,24 @@ type Tab = 'upload' | 'viewer' | 'dashboard' | 'history';
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('upload');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [data, setData] = useState<ParsedData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyFiles, setHistoryFiles] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['workspace', 'analytics']);
   const [reportName, setReportName] = useState('');
+
+  // Handle Theme
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // Load history on mount
   useEffect(() => {
@@ -77,6 +89,28 @@ export default function App() {
       setReportName(fileName.split('.')[0]); // Default report name
       setActiveTab('dashboard'); // Auto switch to dashboard
       setIsLoading(false);
+
+      // Trigger Auto-Insights in background
+      generateAutoInsights(summary);
+  };
+
+  const generateAutoInsights = async (summary: string) => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: "Genera un análisis ejecutivo rápido de estos datos en 3 bullet points." }],
+          systemPrompt: `Eres un analista experto. Analiza este resumen y extrae 3 hallazgos clave o anomalías:\n${summary}`
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setData(prev => prev ? { ...prev, insights: data.text } : null);
+      }
+    } catch (err) {
+      console.error("Auto-insights error", err);
+    }
   };
 
   const handleFileUpload = (file: File) => {
@@ -213,95 +247,166 @@ export default function App() {
     XLSX.writeFile(wb, `${reportName || 'report'}_premium_export.xlsx`);
   };
 
-  const NavItem = ({ tab, icon: Icon, label }: { tab: Tab; icon: any; label: string }) => (
+  const toggleGroup = (group: string) => {
+    setExpandedGroups(prev => 
+      prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]
+    );
+  };
+
+  const NavItem = ({ tab, icon: Icon, label, active }: { tab: Tab; icon: any; label: string; active: boolean }) => (
     <button
       onClick={() => setActiveTab(tab)}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium group",
-        activeTab === tab 
-          ? "bg-brand-turquoise/10 text-brand-turquoise shadow-sm" 
-          : "text-slate-500 hover:bg-slate-50 hover:text-brand-dark"
+        "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium group relative",
+        active 
+          ? "bg-brand-turquoise/10 text-brand-turquoise" 
+          : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-brand-dark dark:hover:text-white"
       )}
     >
-      <Icon size={20} className={cn(activeTab === tab ? "text-brand-turquoise" : "text-slate-400 group-hover:text-brand-dark")} />
+      <Icon size={18} className={cn(active ? "text-brand-turquoise" : "text-slate-400 group-hover:text-brand-dark dark:group-hover:text-white")} />
       {isSidebarOpen && <span>{label}</span>}
+      {active && <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-6 bg-brand-turquoise rounded-r-full" />}
     </button>
   );
 
+  const SidebarGroup = ({ label, id, icon: Icon, children }: any) => {
+    const isExpanded = expandedGroups.includes(id);
+    return (
+      <div className="space-y-1">
+        <button 
+          onClick={() => toggleGroup(id)}
+          className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-brand-dark dark:hover:text-slate-300 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            {isSidebarOpen && <span>{label}</span>}
+          </div>
+          {isSidebarOpen && (
+            <motion.span animate={{ rotate: isExpanded ? 0 : -90 }}>
+               <Menu size={12} className="rotate-90" />
+            </motion.span>
+          )}
+        </button>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden space-y-1"
+            >
+              {children}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   if (!isLoggedIn) {
     return (
-      <div className="h-screen w-full bg-brand-gray">
+      <div className="h-screen w-full bg-brand-gray dark:bg-dark-bg transition-colors duration-300">
         <Login onLogin={() => setIsLoggedIn(true)} />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-brand-gray overflow-hidden font-sans">
+    <div className="flex h-screen bg-brand-gray dark:bg-dark-bg overflow-hidden font-sans transition-colors duration-300">
       {/* Sidebar */}
       <aside 
         className={cn(
-          "bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-20 shadow-xl shadow-slate-200/50",
+          "bg-white dark:bg-dark-card border-r border-slate-200 dark:border-dark-border flex flex-col transition-all duration-300 z-20 shadow-xl shadow-slate-200/50 dark:shadow-none",
           isSidebarOpen ? "w-72" : "w-20"
         )}
       >
         <div className="p-6 flex items-center justify-between h-20">
           {isSidebarOpen && (
             <div className="flex flex-col">
-              <span className="font-bold text-lg text-brand-dark tracking-tight leading-none">TSV Intelligence</span>
+              <span className="font-bold text-lg text-brand-dark dark:text-white tracking-tight leading-none">TSV Intelligence</span>
               <span className="text-xs text-brand-turquoise font-bold tracking-widest uppercase">PRO EDITION</span>
             </div>
           )}
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-brand-dark transition-colors">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-brand-dark dark:hover:text-white transition-colors">
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          <NavItem tab="upload" icon={UploadCloud} label="Carga de Datos" />
-          <NavItem tab="viewer" icon={TableIcon} label="Visor Interactivo" />
-          <NavItem tab="dashboard" icon={LayoutDashboard} label="Dashboard Ejecutivo" />
-          <NavItem tab="history" icon={Vault} label="Bóveda Histórica" />
+        <nav className="flex-1 px-4 space-y-6 mt-4 overflow-y-auto no-scrollbar">
+          <SidebarGroup label="Workspace" id="workspace" icon={Database}>
+            <NavItem tab="upload" icon={UploadCloud} label="Carga de Datos" active={activeTab === 'upload'} />
+            <NavItem tab="viewer" icon={TableIcon} label="Visor Interactivo" active={activeTab === 'viewer'} />
+          </SidebarGroup>
+
+          <SidebarGroup label="Analytics" id="analytics" icon={LayoutDashboard}>
+            <NavItem tab="dashboard" icon={LayoutDashboard} label="Live Dashboard" active={activeTab === 'dashboard'} />
+            <NavItem tab="history" icon={Vault} label="Bóveda de Datos" active={activeTab === 'history'} />
+          </SidebarGroup>
+
+          <SidebarGroup label="System" id="system" icon={MessageSquare}>
+             <button
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className={cn(
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium group",
+                    isChatOpen ? "bg-brand-turquoise/10 text-brand-turquoise" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                )}
+                >
+                <MessageSquare size={18} />
+                {isSidebarOpen && <span>Asistente IA</span>}
+            </button>
+          </SidebarGroup>
         </nav>
 
         <div className="p-4 border-t border-slate-100 space-y-3">
           {isSidebarOpen && (
             <div className="flex items-center gap-3 px-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-brand-dark text-white flex items-center justify-center text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-brand-dark dark:bg-brand-turquoise text-white flex items-center justify-center text-xs font-bold">
                 AD
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-brand-dark">Admin User</span>
+                <span className="text-sm font-semibold text-brand-dark dark:text-white">Admin User</span>
                 <span className="text-xs text-slate-400">Empresa S.A.</span>
               </div>
             </div>
           )}
           
-          <button
-            onClick={() => setIsLoggedIn(false)}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors text-sm font-medium",
-              !isSidebarOpen && "justify-center px-0"
-            )}
-          >
-            <LogOut size={18} />
-            {isSidebarOpen && "Cerrar Sesión"}
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                className={cn(
+                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-brand-turquoise transition-colors text-sm font-medium",
+                !isSidebarOpen && "justify-center px-0"
+                )}
+            >
+                {theme === 'light' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
+                {isSidebarOpen && (theme === 'light' ? "Modo Oscuro" : "Modo Claro")}
+            </button>
+            
+            <button
+                onClick={() => setIsLoggedIn(false)}
+                className={cn(
+                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors text-sm font-medium",
+                !isSidebarOpen && "justify-center px-0"
+                )}
+            >
+                <LogOut size={18} />
+                {isSidebarOpen && "Cerrar Sesión"}
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 relative">
         {/* Top Bar */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 z-10 sticky top-0">
+        <header className="h-20 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-slate-200 dark:border-dark-border flex items-center justify-between px-8 z-10 sticky top-0 transition-colors">
           <div>
-            <h2 className="text-xl font-bold text-brand-dark">
+            <h2 className="text-xl font-bold text-brand-dark dark:text-white">
               {activeTab === 'upload' && 'Nueva Lectura'}
               {activeTab === 'viewer' && 'Explorador de Datos'}
               {activeTab === 'dashboard' && 'Dashboard Ejecutivo'}
               {activeTab === 'history' && 'Bóveda de Reportes'}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">Gestión Inteligente de Datos TSV</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Gestión Inteligente de Datos TSV</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -309,7 +414,7 @@ export default function App() {
               <>
                 <button 
                   onClick={handleExportExcel}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:border-brand-turquoise hover:text-brand-turquoise transition-all text-sm font-medium shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-turquoise hover:text-brand-turquoise transition-all text-sm font-medium shadow-sm"
                 >
                   <Download size={18} />
                   <span className="hidden md:inline">Exportar Premium</span>
@@ -321,14 +426,14 @@ export default function App() {
                     "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-sm font-medium shadow-sm",
                     isChatOpen 
                       ? "bg-brand-turquoise/10 border-brand-turquoise text-brand-turquoise" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-brand-turquoise/50"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-turquoise/50"
                   )}
                 >
                   <MessageSquare size={18} />
                   <span className="hidden md:inline">Asistente IA</span>
                 </button>
 
-                <div className="h-8 w-px bg-slate-200 mx-2"></div>
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
 
                 <div className="flex items-center gap-2">
                     <input 
@@ -336,7 +441,7 @@ export default function App() {
                         value={reportName}
                         onChange={(e) => setReportName(e.target.value)}
                         placeholder="Nombre del Reporte"
-                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-brand-turquoise w-40"
+                        className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-brand-turquoise dark:text-white"
                     />
                     <button 
                     onClick={handleFinishAndSave}
@@ -412,7 +517,7 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <Dashboard stats={data.stats} />
+                <Dashboard stats={data.stats} insights={data.insights} />
               </motion.div>
             )}
 
