@@ -13,7 +13,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
   History, UploadCloud, Download, Menu, X, MessageSquare,
-  LogOut, Save, CheckCircle, Database, Vault, Presentation
+  LogOut, Save, CheckCircle, Database, Vault, Presentation,
+  Settings as SettingsIcon, Sun, Moon, Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +27,7 @@ interface ParsedData {
   insights?: string; // New field for AI insights
 }
 
-type Tab = 'upload' | 'viewer' | 'dashboard' | 'history' | 'presentation';
+type Tab = 'upload' | 'viewer' | 'dashboard' | 'history' | 'presentation' | 'settings';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -40,6 +41,11 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['workspace', 'analytics']);
   const [reportName, setReportName] = useState('');
+  const [logo, setLogo] = useState<string | null>(localStorage.getItem('tsv_logo'));
+
+  useEffect(() => {
+    if (logo) localStorage.setItem('tsv_logo', logo);
+  }, [logo]);
 
   // Handle Theme
   useEffect(() => {
@@ -274,7 +280,7 @@ export default function App() {
           : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-brand-dark dark:hover:text-white"
       )}
     >
-      <Icon size={18} className={cn(active ? "text-brand-turquoise" : "text-slate-400 group-hover:text-brand-dark dark:group-hover:text-white")} />
+      <Icon size={18} className={cn("icon-shadow", active ? "text-brand-turquoise" : "text-slate-400 group-hover:text-brand-dark dark:group-hover:text-white")} />
       {isSidebarOpen && <span>{label}</span>}
       {active && <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-6 bg-brand-turquoise rounded-r-full" />}
     </button>
@@ -354,7 +360,7 @@ export default function App() {
             <NavItem tab="history" icon={Vault} label="Bóveda de Datos" active={activeTab === 'history'} />
           </SidebarGroup>
 
-          <SidebarGroup label="System" id="system" icon={MessageSquare}>
+          <SidebarGroup label="System" id="system" icon={SettingsIcon}>
              <button
                 onClick={() => setIsChatOpen(!isChatOpen)}
                 className={cn(
@@ -362,9 +368,10 @@ export default function App() {
                     isChatOpen ? "bg-brand-turquoise/10 text-brand-turquoise" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 )}
                 >
-                <MessageSquare size={18} />
+                <MessageSquare size={18} className="icon-shadow" />
                 {isSidebarOpen && <span>Asistente IA</span>}
             </button>
+            <NavItem tab="settings" icon={SettingsIcon} label="Configuración" active={activeTab === 'settings'} />
           </SidebarGroup>
         </nav>
 
@@ -385,11 +392,11 @@ export default function App() {
             <button
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                 className={cn(
-                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-brand-turquoise transition-colors text-sm font-medium",
+                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-brand-turquoise/10 hover:text-brand-turquoise transition-colors text-sm font-medium",
                 !isSidebarOpen && "justify-center px-0"
                 )}
             >
-                {theme === 'light' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
+                {theme === 'light' ? <Moon size={18} className="icon-shadow" /> : <Sun size={18} className="icon-shadow text-yellow-500" />}
                 {isSidebarOpen && (theme === 'light' ? "Modo Oscuro" : "Modo Claro")}
             </button>
             
@@ -544,8 +551,83 @@ export default function App() {
                 <PresentationMode 
                   stats={data.stats} 
                   insights={data.insights} 
-                  onBack={() => setActiveTab('dashboard')} 
+                  onBack={() => setActiveTab('dashboard')}
+                  logo={logo}
                 />
+              </motion.div>
+            )}
+
+            {activeTab === 'settings' && (
+              <motion.div 
+                key="settings"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="max-w-4xl mx-auto w-full p-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+              >
+                <div className="bg-white dark:bg-dark-card rounded-[2.5rem] border border-slate-100 dark:border-dark-border p-10 shadow-xl">
+                  <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-8">Configuración de Marca</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-6">
+                      <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Logo Corporativo</label>
+                      <div className="flex flex-col items-center gap-6 p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-700">
+                        {logo ? (
+                          <div className="relative group">
+                            <img src={logo} alt="Logo" className="max-h-24 object-contain" />
+                            <button 
+                              onClick={() => setLogo(null)}
+                              className="absolute -top-4 -right-4 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <ImageIcon size={48} className="mx-auto text-slate-300 mb-4" />
+                            <p className="text-sm text-slate-500 mb-4">Formatos sugeridos: PNG, SVG (Máx 2MB)</p>
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          id="logo-upload" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => setLogo(reader.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        <button 
+                          onClick={() => document.getElementById('logo-upload')?.click()}
+                          className="px-6 py-2.5 bg-brand-turquoise text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-turquoise/20 hover:scale-105 transition-transform"
+                        >
+                          Seleccionar Logo
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                       <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Previsualización en Reportes</label>
+                       <div className="aspect-video glass-startup rounded-[2rem] flex items-center justify-center p-4">
+                          <div className="text-center">
+                             {logo ? (
+                               <img src={logo} alt="Preview" className="max-h-12 mx-auto mb-4 opacity-80" />
+                             ) : (
+                               <div className="h-8 w-24 bg-slate-700/20 rounded-md mx-auto mb-4" />
+                             )}
+                             <div className="h-2 w-32 bg-slate-700/20 rounded-full mx-auto mb-2" />
+                             <div className="h-2 w-20 bg-slate-700/10 rounded-full mx-auto" />
+                          </div>
+                       </div>
+                       <p className="text-xs text-slate-500 italic">Este logo aparecerá en el encabezado de tus dashboards y en cada slide de tus presentaciones.</p>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             )}
 

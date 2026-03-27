@@ -7,11 +7,13 @@ import {
 } from 'lucide-react';
 import { DataStats } from '@/lib/data-processor';
 import { cn } from '@/lib/utils';
+import pptxgen from "pptxgenjs";
 
 interface PresentationModeProps {
   stats: DataStats;
   insights?: string;
   onBack: () => void;
+  logo?: string | null;
 }
 
 interface Slide {
@@ -23,7 +25,7 @@ interface Slide {
   metric?: string;
 }
 
-export function PresentationMode({ stats, insights, onBack }: PresentationModeProps) {
+export function PresentationMode({ stats, insights, onBack, logo }: PresentationModeProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -61,6 +63,58 @@ export function PresentationMode({ stats, insights, onBack }: PresentationModePr
       icon: CheckCircle
     }
   ];
+
+  const handlePPTXExport = () => {
+    const pres = new pptxgen();
+    pres.layout = 'LAYOUT_WIDE';
+    
+    slides.forEach(slide => {
+      const pptSlide = pres.addSlide();
+      
+      // Background
+      pptSlide.background = { color: "0F172A" };
+      
+      // Logo if exists
+      if (logo) {
+        pptSlide.addImage({ data: logo, x: 0.5, y: 0.2, w: 1, h: 0.5 });
+      }
+
+      // Title
+      pptSlide.addText(slide.title, { 
+        x: 0.5, y: 1.0, w: '90%', fontSize: 36, bold: true, color: "2DD4BF" 
+      });
+      
+      // Subtitle
+      pptSlide.addText(slide.subtitle, { 
+        x: 0.5, y: 1.8, w: '90%', fontSize: 18, italic: true, color: "94A3B8" 
+      });
+
+      // Content
+      pptSlide.addText(slide.content, { 
+        x: 0.5, y: 2.8, w: '60%', fontSize: 16, color: "F1F5F9", lineSpacing: 1.5 
+      });
+
+      // Metric Box if exists
+      if (slide.metric) {
+        pptSlide.addShape(pres.ShapeType.rect, { 
+            x: 7.0, y: 2.5, w: 2.5, h: 2.5, fill: { color: "1E293B" }, line: { color: "2DD4BF", width: 1 } 
+        });
+        pptSlide.addText(slide.metric.split(' ')[0], { 
+            x: 7.0, y: 3.2, w: 2.5, fontSize: 44, bold: true, color: "2DD4BF", align: 'center' 
+        });
+        pptSlide.addText(slide.metric.split(' ').slice(1).join(' '), { 
+            x: 7.0, y: 4.2, w: 2.5, fontSize: 12, bold: true, color: "94A3B8", align: 'center' 
+        });
+      }
+
+      // Footer
+      pptSlide.addText("TSV-IA Pro Intelligence Report", { 
+        x: 0.5, y: 6.8, w: '90%', fontSize: 10, color: "475569" 
+      });
+    });
+
+    pres.writeFile({ fileName: `TSV_Report_${new Date().getTime()}.pptx` });
+  };
 
   const handleStart = () => {
     setIsGenerating(true);
@@ -165,14 +219,14 @@ export function PresentationMode({ stats, insights, onBack }: PresentationModePr
              className="px-4 py-2.5 bg-white/5 text-white rounded-xl border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-2 text-xs font-bold"
              title="Exportar a PDF"
            >
-              <Download size={16} /> PDF
+              <Download size={16} className="icon-shadow" /> PDF
            </button>
            <button 
-             onClick={() => alert('Generando PPTX... Esta función requiere la librería PptxGenJS (Elite Add-on)')}
+             onClick={handlePPTXExport}
              className="px-4 py-2.5 bg-brand-turquoise/20 text-brand-turquoise rounded-xl border border-brand-turquoise/30 hover:bg-brand-turquoise/30 transition-colors flex items-center gap-2 text-xs font-bold"
              title="Exportar a PPTX"
            >
-              <Presentation size={16} /> PPTX
+              <Presentation size={16} className="icon-shadow" /> PPTX
            </button>
         </div>
       </div>
@@ -188,6 +242,11 @@ export function PresentationMode({ stats, insights, onBack }: PresentationModePr
             className="grid grid-cols-12 gap-16 w-full items-center"
           >
             <div className="col-span-7 space-y-8">
+              {logo && (
+                <div className="mb-4">
+                  <img src={logo} alt="Brand Logo" className="max-h-10 object-contain" />
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <div className="p-4 bg-brand-turquoise/10 text-brand-turquoise rounded-2xl border border-brand-turquoise/20">
                     {React.createElement(slides[currentSlide].icon, { size: 32 })}
@@ -258,6 +317,29 @@ export function PresentationMode({ stats, insights, onBack }: PresentationModePr
             </div>
           </motion.div>
         </AnimatePresence>
+      </div>
+
+      {/* Hidden Print Container (Only for PDF Export) */}
+      <div className="hidden slide-print-container">
+        {slides.map((slide, i) => (
+          <div key={i} className="slide-page">
+            {logo && <img src={logo} alt="Logo" style={{ maxHeight: '60px', marginBottom: '2rem' }} />}
+            <h1 style={{ fontSize: '32pt', fontWeight: 'bold', color: '#0f172a', marginBottom: '1rem' }}>{slide.title}</h1>
+            <h2 style={{ fontSize: '18pt', fontStyle: 'italic', color: '#64748b', marginBottom: '2rem' }}>{slide.subtitle}</h2>
+            <div style={{ fontSize: '16pt', lineHeight: '1.6', color: '#334155', maxWidth: '800px', marginBottom: '3rem' }}>
+              {slide.content}
+            </div>
+            {slide.metric && (
+              <div style={{ padding: '2rem', border: '2px solid #2dd4bf', borderRadius: '1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '48pt', fontWeight: 'black', color: '#2dd4bf' }}>{slide.metric.split(' ')[0]}</div>
+                <div style={{ fontSize: '12pt', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>{slide.metric.split(' ').slice(1).join(' ')}</div>
+              </div>
+            )}
+            <div style={{ marginTop: 'auto', paddingTop: '2rem', borderTop: '1px solid #e2e8f0', width: '100%', fontSize: '10pt', color: '#94a3b8' }}>
+              TSV-IA Pro Executive Report | AI Generated Insights
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
