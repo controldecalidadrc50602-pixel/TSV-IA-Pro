@@ -202,12 +202,16 @@ export default function App() {
   };
 
   const loadFromHistory = (file: any, targetTab: Tab = 'dashboard') => {
+    // We re-process even from history to ensure latest formatting/logic applies
     const { processedRows, stats, formattedHeaders } = processData(file.headers, file.data);
-    const summary = generateDataSummary(formattedHeaders, file.data, stats);
+    
+    // Re-map rows to ensure they catch any new formatting logic (like smart time)
+    const rows = processedRows.map(r => formattedHeaders.map(h => String(r[h])));
+    const summary = generateDataSummary(formattedHeaders, rows, stats);
     
     setData({
       headers: formattedHeaders,
-      rows: file.data, // This stays formatted from history entry
+      rows,
       fileName: file.name,
       stats,
       summary
