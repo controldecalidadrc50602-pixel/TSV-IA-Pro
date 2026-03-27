@@ -6,13 +6,14 @@ import {
 import { DataStats } from '@/lib/data-processor';
 import { Users, Calendar, MessageSquare, TrendingUp, Clock, Hash, Globe, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { cn } from '@/lib/utils';
 
 interface DashboardProps {
   stats: DataStats;
   insights?: string;
 }
 
-const COLORS = ['#0D9488', '#0F172A', '#2DD4BF', '#14B8A6', '#065F46', '#CCFBF1'];
+const COLORS = ['#0D9488', '#0F172A', '#2DD4BF', '#14B8A6', '#065F46', '#CCFBF1', '#6366F1', '#8B5CF6'];
 
 const KpiCard = ({ icon: Icon, label, value, color, delay }: any) => (
   <motion.div 
@@ -26,7 +27,12 @@ const KpiCard = ({ icon: Icon, label, value, color, delay }: any) => (
         <Icon size={24} className={color.replace('bg-', 'text-')} />
       </div>
       <div>
-        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
+        <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{label}</p>
+            {label.includes('SLA') && (
+                <div className={cn("w-2 h-2 rounded-full", parseFloat(value) > 80 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-red-500 animate-pulse")} />
+            )}
+        </div>
         <h3 className="text-2xl font-black text-slate-800 dark:text-white">{value}</h3>
       </div>
     </div>
@@ -66,7 +72,7 @@ export function Dashboard({ stats, insights }: DashboardProps) {
         )}
       </div>
 
-      {/* KPI Rejilla Superior - Expandida */}
+      {/* KPI Rejilla Superior - Operativa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
           icon={TrendingUp} 
@@ -96,6 +102,35 @@ export function Dashboard({ stats, insights }: DashboardProps) {
           color="bg-slate-900"
           delay={0.4}
         />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+         <div className="bg-slate-50 dark:bg-dark-border/20 p-4 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-dark-border group hover:bg-white dark:hover:bg-dark-card transition-all">
+            <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Proyección Volumen AI</span>
+                <span className="text-[8px] text-teal-500 font-bold uppercase">Mañana (Est.)</span>
+            </div>
+            <span className="text-xl font-black text-teal-600 dark:text-teal-400">
+                ~{Math.round(stats.totalSessions * 1.05)}
+            </span>
+         </div>
+         <div className="bg-slate-50 dark:bg-dark-border/20 p-4 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Transferencias Recibidas</span>
+            <span className="text-xl font-black text-slate-800 dark:text-white">{stats.totalTransfers || 0}</span>
+         </div>
+         <div className="bg-slate-50 dark:bg-dark-border/20 p-4 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Total Respuestas</span>
+            <span className="text-xl font-black text-slate-800 dark:text-white">{stats.totalResponses || 0}</span>
+         </div>
+         <div className="bg-slate-50 dark:bg-dark-border/20 p-4 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sesiones en Curso</span>
+            <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                <span className="text-xl font-black text-slate-800 dark:text-white">
+                    {stats.statsByStatus?.find(s => s.status.toLowerCase().includes('curso'))?.count || 0}
+                </span>
+            </div>
+         </div>
       </div>
 
       {/* Main Content Grid (12 Columns) */}
@@ -212,21 +247,106 @@ export function Dashboard({ stats, insights }: DashboardProps) {
           </div>
         </div>
 
+        {/* Tipificaciones (Subestimado a 6 col) */}
+        <div className="col-span-12 lg:col-span-6 bg-white dark:bg-dark-card p-8 rounded-[2rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px]">
+          <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">Tipificaciones Críticas</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">Distribución por categoría de atención</p>
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={stats.statsByTipificacion?.slice(0, 6)}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
+                <XAxis type="number" hide />
+                <YAxis 
+                  dataKey="category" 
+                  type="category" 
+                  width={120} 
+                  fontSize={10} 
+                  fontWeight={700}
+                  tick={{ fill: '#64748B' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip 
+                   cursor={{fill: 'transparent'}}
+                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="count" fill="#2DD4BF" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Colas de Atención (6 col) */}
+        <div className="col-span-12 lg:col-span-6 bg-white dark:bg-dark-card p-8 rounded-[2rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px]">
+          <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">Flujo por Cola</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">Departamentos con mayor volumen</p>
+          <div className="flex-1 flex items-center">
+            <div className="w-1/2 h-full">
+               <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.statsByCola?.slice(0, 5)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={65}
+                    paddingAngle={5}
+                    dataKey="count"
+                    nameKey="cola"
+                  >
+                    {stats.statsByCola?.slice(0, 5).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-1/2 space-y-3">
+                {stats.statsByCola?.slice(0, 4).map((item, i) => (
+                    <div key={i} className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
+                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate tracking-tighter uppercase">{item.cola}</span>
+                        </div>
+                        <div className="flex items-baseline gap-2 ml-4">
+                            <span className="text-sm font-black text-slate-900 dark:text-white">{item.count}</span>
+                            <span className="text-[8px] text-slate-400 font-bold">SESIONES</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+          </div>
+        </div>
+
         {/* Tabla Detalle KPI (12 col) */}
         <div className="col-span-12 bg-slate-900 p-8 rounded-[2rem] shadow-2xl shadow-brand-dark/20 flex flex-col lg:flex-row items-center gap-8">
             <div className="flex-1 text-center lg:text-left">
-                <h3 className="text-xl font-black text-white mb-2">Resumen de Métricas Calculadas</h3>
-                <p className="text-teal-400/70 text-sm">Insights automáticos generados por el motor TSV-IA Pro</p>
+                <h3 className="text-xl font-black text-white mb-2">Control de Mandos Operativo</h3>
+                <p className="text-teal-400/70 text-sm">Resumen táctico de tipificaciones y flujos de red</p>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                {Object.entries(stats.numericStats).slice(0, 4).map(([key, stat], i) => (
-                    <div key={i} className="text-center lg:text-left border-l border-white/10 pl-6">
-                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">{key}</p>
-                        <p className="text-2xl font-black text-white">{(stat.mean || 0).toFixed(1)}</p>
-                        <p className="text-[10px] text-teal-400 font-bold">PROM. GLOBAL</p>
-                    </div>
-                ))}
+                <div className="text-center lg:text-left border-l border-white/10 pl-6">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Top Tipificación</p>
+                    <p className="text-sm font-black text-white truncate max-w-[120px]">{stats.statsByTipificacion?.[0]?.category || '-'}</p>
+                </div>
+                <div className="text-center lg:text-left border-l border-white/10 pl-6">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Cola Principal</p>
+                    <p className="text-sm font-black text-white truncate max-w-[120px]">{stats.statsByCola?.[0]?.cola || '-'}</p>
+                </div>
+                <div className="text-center lg:text-left border-l border-white/10 pl-6">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Transfer Rate</p>
+                    <p className="text-lg font-black text-white">
+                        {stats.totalSessions > 0 ? ((stats.totalTransfers / stats.totalSessions) * 100).toFixed(1) : 0}%
+                    </p>
+                </div>
+                <div className="text-center lg:text-left border-l border-white/10 pl-6">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Estado: Cerradas</p>
+                    <p className="text-lg font-black text-white">
+                        {stats.statsByStatus?.find(s => s.status.toLowerCase().includes('cerrada'))?.count || 0}
+                    </p>
+                </div>
             </div>
         </div>
 

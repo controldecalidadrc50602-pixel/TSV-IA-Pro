@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { FileUpload } from '@/components/FileUpload';
 import { DataTable } from '@/components/DataTable';
 import { Dashboard } from '@/components/Dashboard';
+import { PresentationMode } from '@/components/PresentationMode';
 import { ChatAssistant } from '@/components/ChatAssistant';
 import { Login } from '@/components/Login';
 import { processData, generateDataSummary, DataStats } from '@/lib/data-processor';
@@ -12,7 +13,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
   History, UploadCloud, Download, Menu, X, MessageSquare,
-  LogOut, Save, CheckCircle, Database, Vault
+  LogOut, Save, CheckCircle, Database, Vault, Presentation
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +26,7 @@ interface ParsedData {
   insights?: string; // New field for AI insights
 }
 
-type Tab = 'upload' | 'viewer' | 'dashboard' | 'history';
+type Tab = 'upload' | 'viewer' | 'dashboard' | 'history' | 'presentation';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -338,7 +339,7 @@ export default function App() {
           </SidebarGroup>
 
           <SidebarGroup label="Analytics" id="analytics" icon={LayoutDashboard}>
-            <NavItem tab="dashboard" icon={LayoutDashboard} label="Live Dashboard" active={activeTab === 'dashboard'} />
+            <NavItem tab="presentation" icon={Presentation} label="Modo Presentación" active={activeTab === 'presentation'} />
             <NavItem tab="history" icon={Vault} label="Bóveda de Datos" active={activeTab === 'history'} />
           </SidebarGroup>
 
@@ -518,6 +519,22 @@ export default function App() {
                 exit={{ opacity: 0 }}
               >
                 <Dashboard stats={data.stats} insights={data.insights} />
+              </motion.div>
+            )}
+
+            {activeTab === 'presentation' && data && (
+              <motion.div 
+                key="presentation"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full"
+              >
+                <PresentationMode 
+                  stats={data.stats} 
+                  insights={data.insights} 
+                  onBack={() => setActiveTab('dashboard')} 
+                />
               </motion.div>
             )}
 

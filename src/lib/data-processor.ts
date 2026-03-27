@@ -19,6 +19,11 @@ export interface DataStats {
   botSuccessRate?: number; // % of sessions resolved by bot
   efficiencyIndex?: number; // Ratio talk/wait
   peakHour?: { hour: string; count: number };
+  statsByTipificacion: { category: string; count: number }[];
+  statsByCola: { cola: string; count: number }[];
+  statsByStatus: { status: string; count: number }[];
+  totalTransfers: number;
+  totalResponses: number;
 }
 
 // Helper to format seconds to HHh MMm SSs
@@ -44,6 +49,13 @@ export function processData(headers: string[], rows: string[][]): { processedRow
   const userIdx = headers.findIndex(h => h.toLowerCase().includes('usuario') || h.toLowerCase().includes('user') || h.toLowerCase().includes('id_usuario'));
   const channelIdx = headers.findIndex(h => h.toLowerCase().includes('canal') || h.toLowerCase().includes('channel'));
   const closeTimeIdx = headers.findIndex(h => h.toLowerCase().includes('cierre') || h.toLowerCase().includes('close'));
+  
+  // Operational Indices
+  const tipifIdx = headers.findIndex(h => h.toLowerCase().includes('tipificación') || h.toLowerCase().includes('categoría') || h.toLowerCase().includes('motivo'));
+  const colaIdx = headers.findIndex(h => h.toLowerCase().includes('cola de atención') || h.toLowerCase().includes('cola') || h.toLowerCase().includes('queue'));
+  const statusIdx = headers.findIndex(h => h.toLowerCase().includes('estado') || h.toLowerCase().includes('status'));
+  const transfersIdx = headers.findIndex(h => h.toLowerCase().includes('transferencias recibidas') || h.toLowerCase().includes('transferencia'));
+  const responsesIdx = headers.findIndex(h => h.toLowerCase().includes('cantidad de respuesta') || h.toLowerCase().includes('respuestas'));
 
   // Identify Duration Columns (Time vs Count Logic)
   const durationIndices = headers.map((h, i) => {
@@ -75,7 +87,12 @@ export function processData(headers: string[], rows: string[][]): { processedRow
   const dates: Date[] = [];
   const hoursMap = new Map<string, number>();
   const channelMap = new Map<string, number>();
+  const TipifMap = new Map<string, number>();
+  const ColaMap = new Map<string, number>();
+  const StatusMap = new Map<string, number>();
   const numericValues: Record<string, number[]> = {};
+  let totalTransfers = 0;
+  let totalResponses = 0;
 
   // Initialize hours map 00-23
   for (let i = 0; i < 24; i++) {
@@ -188,14 +205,32 @@ export function processData(headers: string[], rows: string[][]): { processedRow
         }
       }
 
-      // Track Unique Users
-      if (colIndex === userIdx && value && value !== '0') {
-        users.add(value);
-      }
-
       // Track Channels (Ignore empty or '-')
       if (colIndex === channelIdx && value && value !== '-' && value !== '0') {
         channelMap.set(value, (channelMap.get(value) || 0) + 1);
+      }
+
+      // Track Tipificaciones
+      if (colIndex === tipifIdx && value && value !== '-' && value !== '0') {
+        TipifMap.set(value, (TipifMap.get(value) || 0) + 1);
+      }
+
+      // Track Colas
+      if (colIndex === colaIdx && value && value !== '-' && value !== '0') {
+        ColaMap.set(value, (ColaMap.get(value) || 0) + 1);
+      }
+
+      // Track Status
+      if (colIndex === statusIdx && value && value !== '-' && value !== '0') {
+        StatusMap.set(value, (StatusMap.get(value) || 0) + 1);
+      }
+
+      // Track Totals for Specific Operational Columns
+      if (colIndex === transfersIdx && !isNaN(parseFloat(value))) {
+          totalTransfers += parseFloat(value);
+      }
+      if (colIndex === responsesIdx && !isNaN(parseFloat(value))) {
+          totalResponses += parseFloat(value);
       }
 
       rowObj[header] = displayValue;
@@ -216,6 +251,18 @@ export function processData(headers: string[], rows: string[][]): { processedRow
 
   const sessionsByChannel = Array.from(channelMap.entries())
     .map(([channel, count]) => ({ channel, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const statsByTipificacion = Array.from(TipifMap.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const statsByCola = Array.from(ColaMap.entries())
+    .map(([cola, count]) => ({ cola, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const statsByStatus = Array.from(StatusMap.entries())
+    .map(([status, count]) => ({ status, count }))
     .sort((a, b) => b.count - a.count);
 
   const numericStats: Record<string, { min: number; max: number; mean: number; sum: number }> = {};
@@ -290,7 +337,12 @@ export function processData(headers: string[], rows: string[][]): { processedRow
       slaCompliance,
       botSuccessRate,
       efficiencyIndex,
-      peakHour
+      peakHour,
+      statsByTipificacion,
+      statsByCola,
+      statsByStatus,
+      totalTransfers,
+      totalResponses
     },
     formattedHeaders: headers
   };
