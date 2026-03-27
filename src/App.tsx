@@ -15,9 +15,12 @@ import {
   History, UploadCloud, Download, Menu, X, MessageSquare,
   LogOut, Save, CheckCircle, Database, Vault, Presentation,
   Settings as SettingsIcon, Sun, Moon, Image as ImageIcon,
-  Sparkles, TrendingUp
+  Sparkles, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+import { Auth } from '@/components/Auth';
+import { Session } from '@supabase/supabase-js';
 
 interface ParsedData {
   headers: string[];
@@ -31,7 +34,8 @@ interface ParsedData {
 type Tab = 'upload' | 'viewer' | 'dashboard' | 'history' | 'presentation' | 'settings';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('upload');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [data, setData] = useState<ParsedData | null>(null);
@@ -60,10 +64,39 @@ export default function App() {
     }
   }, [theme]);
 
+  // Handle Auth Session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Set initial theme from storage or meta
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  // Persist theme
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
   // Load history on mount
   useEffect(() => {
-    loadHistory();
-  }, []);
+    if (session) {
+      loadHistory();
+    }
+  }, [session]);
 
   const loadHistory = async () => {
     try {
@@ -233,39 +266,34 @@ export default function App() {
   const generateAISlides = async (): Promise<any[]> => {
     if (!data) return [];
     
-    // System Prompt for Elite Executive Analysis
-    const systemPrompt = `Actúa como un Principal Data Scientist & Business Consultant de nivel "Big Four" especializado en Customer Experience y Operaciones.
-    Tu objetivo es analizar métricas de centros de contacto y generar una presentación estratégica de alto impacto para CEOs.
-    REGLA DE ORO: Responde ÚNICAMENTE con un array JSON válido. Sin texto, sin explicaciones.
-    ESTRUCTURA DEL JSON:
+    const systemPrompt = `Actúa como un Consultor Estratégico Senior (Ex-McKinsey). 
+    Tu objetivo es analizar los datos operativos cargados y generar una presentación ejecutiva de alta gama.
+    IMPORTANTE: Usa los datos REALES proporcionados para encontrar correlaciones y proyecciones.
+    REGLA: Responde ÚNICAMENTE con un array JSON.
+    ESTRUCTURA:
     [
       {
-        "title": "Título Disruptivo",
-        "subtitle": "Análisis táctico/KPI",
-        "content": "Narrativa ejecutiva profunda (máx 180 caracteres). Usa % de mejora y comparaciones teóricas.",
-        "insight": "Recomendación estratégica clave accionable",
-        "metric": "85.2% SLA",
+        "title": "Título Directivo",
+        "subtitle": "Insight de valor",
+        "content": "Análisis profundo basado en los datos (ej: 'El canal X domina el 40% de la carga')",
+        "insight": "Recomendación táctica",
+        "metric": "Valor %",
         "type": "summary" | "efficiency" | "resolution" | "strategy"
       }
     ]
-    Genera exactamente 5 slides cubriendo:
-    1. Executive Perspective (Resumen)
-    2. Operational Excellence (SLA & AHT)
-    3. Automated Resolution (Bot vs Human)
-    4. Critical Friction Points (Anomalías)
-    5. Roadmap of Improvements (Siguientes pasos)`;
+    Genera 5 slides que cuenten una historia: Situación actual, Eficiencia, Automatización, Cuellos de botella y Plan de Acción.`;
 
-    const userMessage = `DATOS OPERATIVOS REALES:
+    const userMessage = `DATASET CARGADO:
     - Periodo: ${data.stats.dateRange}
-    - Total Sesiones: ${data.stats.totalSessions}
-    - SLA Compliance: ${data.stats.slaCompliance?.toFixed(1)}%
-    - Tiempo Atención (AHT): ${data.stats.avgDuration}
-    - Eficiencia Conversión: ${data.stats.efficiencyIndex?.toFixed(1)}%
-    - Mix Canales: ${JSON.stringify(data.stats.sessionsByChannel)}
-    - Pico Horario: ${data.stats.peakHour?.hour}:00
-    - Tipificaciones: ${JSON.stringify(data.stats.statsByTipificacion?.slice(0, 3))}
+    - Total: ${data.stats.totalSessions} sesiones
+    - Canales (Mix): ${JSON.stringify(data.stats.sessionsByChannel.map(c => `${c.channel}: ${c.count}`))}
+    - SLA: ${data.stats.slaCompliance?.toFixed(2)}%
+    - AHT: ${data.stats.avgDuration}
+    - Tipificaciones: ${JSON.stringify(data.stats.statsByTipificacion?.slice(0, 5))}
+    - Peak Hour: ${data.stats.peakHour?.hour}:00
+    - Transf Rate: ${((data.stats.totalTransfers / data.stats.totalSessions) * 100).toFixed(1)}%
     
-    Genera la presentación estratégica "Elite Tier" ahora.`;
+    Genera el análisis estratégico ahora.`;
 
     try {
       const response = await fetch('http://localhost:3001/api/chat', {
@@ -387,12 +415,16 @@ export default function App() {
     );
   };
 
-  if (!isLoggedIn) {
+  if (authLoading) {
     return (
-      <div className="h-screen w-full bg-brand-gray dark:bg-dark-bg transition-colors duration-300">
-        <Login onLogin={() => setIsLoggedIn(true)} />
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="text-brand-turquoise animate-spin shadow-lg" size={48} />
       </div>
     );
+  }
+
+  if (!session) {
+    return <Auth />;
   }
 
   return (
@@ -469,7 +501,7 @@ export default function App() {
             </button>
             
             <button
-                onClick={() => setIsLoggedIn(false)}
+                onClick={() => supabase.auth.signOut()}
                 className={cn(
                 "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors text-sm font-medium",
                 !isSidebarOpen && "justify-center px-0"

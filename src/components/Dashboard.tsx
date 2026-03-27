@@ -205,7 +205,7 @@ export function Dashboard({ stats, insights }: DashboardProps) {
         </div>
 
         {/* Distribución por Canal (4 col) */}
-        <div className="col-span-12 lg:col-span-4 bg-white dark:bg-dark-card p-8 rounded-[2rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[450px]">
+        <div className="col-span-12 lg:col-span-4 bg-white dark:bg-dark-card p-8 rounded-[2rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[500px]">
           <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">Mix de Canales</h3>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-8">Preferencia de contacto</p>
           
@@ -237,13 +237,15 @@ export function Dashboard({ stats, insights }: DashboardProps) {
             </div>
             
             <div className="w-full mt-6 space-y-2">
-                {stats.sessionsByChannel.slice(0, 3).map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
-                            <span className="font-bold text-slate-600">{item.channel}</span>
+                {stats.sessionsByChannel.slice(0, 5).map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs px-2 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
+                            <span className="font-bold text-slate-600 dark:text-slate-400 truncate max-w-[180px]" title={item.channel}>
+                              {item.channel}
+                            </span>
                         </div>
-                        <span className="font-black text-slate-900">{Math.round((item.count / stats.totalSessions) * 100)}%</span>
+                        <span className="font-black text-slate-900 dark:text-white ml-2">{Math.round((item.count / stats.totalSessions) * 100)}%</span>
                     </div>
                 ))}
             </div>

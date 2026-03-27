@@ -1,50 +1,47 @@
-import { openDB, DBSchema } from 'idb';
+import { supabase } from './supabase';
 
-interface FileHistoryDB extends DBSchema {
-  files: {
-    key: string;
-    value: {
-      id: string;
-      name: string;
-      date: Date;
-      data: string[][]; // Raw parsed data
-      headers: string[];
-    };
-    indexes: { 'by-date': Date };
-  };
-}
+export async function saveFile(name: string, headers: string[], data: any[][]) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("No authenticated user");
 
-const DB_NAME = 'tsv-viewer-db';
-const STORE_NAME = 'files';
+  const { data: savedReport, error } = await supabase
+    .from('reports')
+    .insert([{
+      name,
+      headers,
+      data,
+      user_id: user.id
+    }])
+    .select()
+    .single();
 
-export async function initDB() {
-  return openDB<FileHistoryDB>(DB_NAME, 1, {
-    upgrade(db) {
-      const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      store.createIndex('by-date', 'date');
-    },
-  });
-}
-
-export async function saveFile(name: string, headers: string[], data: string[][]) {
-  const db = await initDB();
-  const id = crypto.randomUUID();
-  await db.put(STORE_NAME, {
-    id,
-    name,
-    date: new Date(),
-    headers,
-    data,
-  });
-  return id;
+  if (error) throw error;
+  return savedReport.id;
 }
 
 export async function getFiles() {
-  const db = await initDB();
-  return db.getAllFromIndex(STORE_NAME, 'by-date');
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching files from Supabase", error);
+    return [];
+  }
+  
+  // Transform to match the UI expectations (created_at -> date)
+  return data.map(report => ({
+    ...report,
+    date: new Date(report.created_at)
+  }));
 }
 
 export async function deleteFile(id: string) {
-  const db = await initDB();
-  return db.delete(STORE_NAME, id);
+  const { error } = await supabase
+    .from('reports')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 }
