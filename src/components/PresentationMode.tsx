@@ -14,6 +14,7 @@ interface PresentationModeProps {
   insights?: string;
   onBack: () => void;
   logo?: string | null;
+  onGenerateSlides: () => Promise<Slide[]>;
 }
 
 interface Slide {
@@ -25,44 +26,37 @@ interface Slide {
   metric?: string;
 }
 
-export function PresentationMode({ stats, insights, onBack, logo }: PresentationModeProps) {
+export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlides }: PresentationModeProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
 
-  const slides: Slide[] = [
-    {
-      title: "Resumen Ejecutivo de Operación",
-      subtitle: stats.dateRange,
-      content: `Durante este periodo se procesaron un total de ${stats.totalSessions} sesiones a través de ${stats.sessionsByChannel.length} canales activos.`,
-      insight: "La carga operativa se mantiene estable con una tendencia de crecimiento en canales digitales.",
-      icon: Layout,
-      metric: `${stats.totalSessions} Sesiones`
-    },
-    {
-      title: "Eficiencia y Nivel de Servicio",
-      subtitle: "Indicadores de Desempeño (KPIs)",
-      content: `El cumplimiento de SLA se sitúa en un ${(stats.slaCompliance || 0).toFixed(1)}%, con un tiempo promedio de atención (AHT) de ${stats.avgDuration}.`,
-      insight: "El índice de eficiencia de conversión es del ${(stats.efficiencyIndex || 0).toFixed(1)}%, lo que indica un uso óptimo del tiempo de respuesta.",
-      icon: TrendingUp,
-      metric: `${(stats.slaCompliance || 0).toFixed(1)}% SLA`
-    },
-    {
-      title: "Análisis de Resolución Directa",
-      subtitle: "Efectividad de Automatización",
-      content: `La tasa de resolución por bot alcanzó el ${(stats.botSuccessRate || 0).toFixed(1)}%, evitando la transferencia innecesaria de casos complejos.`,
-      insight: "Se observa una correlación positiva entre la tipificación inteligente y la reducción de transferencias externas.",
-      icon: Sparkles,
-      metric: `${(stats.botSuccessRate || 0).toFixed(1)}% Resolución`
-    },
-    {
-      title: "Conclusiones Estratégicas",
-      subtitle: "Siguientes Pasos Proyectados",
-      content: insights || "Se recomienda optimizar las colas de atención con menor SLA y reforzar las tipificaciones críticas detectadas.",
-      insight: `La hora pico de las ${stats.peakHour?.hour}:00 requiere un refuerzo preventivo de recursos.`,
-      icon: CheckCircle
+  const [aiSlides, setAiSlides] = useState<Slide[]>([]);
+
+  const handleStart = async () => {
+    setIsGenerating(true);
+    try {
+      const generated = await onGenerateSlides();
+      setAiSlides(generated);
+      setHasStarted(true);
+    } catch (err) {
+      console.error("Error generating slides", err);
+      // Fallback
+      setAiSlides([
+        {
+          title: "Análisis Ejecutivo de Operación",
+          subtitle: stats.dateRange,
+          content: `Se procesaron un total de ${stats.totalSessions} sesiones.`,
+          insight: "La eficiencia operativa se mantiene dentro de los parámetros esperados.",
+          icon: Layout,
+          metric: `${stats.totalSessions} Sesiones`
+        }
+      ]);
+      setHasStarted(true);
+    } finally {
+      setIsGenerating(false);
     }
-  ];
+  };
 
   const handlePPTXExport = () => {
     const pres = new pptxgen();
@@ -70,59 +64,33 @@ export function PresentationMode({ stats, insights, onBack, logo }: Presentation
     
     slides.forEach(slide => {
       const pptSlide = pres.addSlide();
-      
-      // Background
       pptSlide.background = { color: "0F172A" };
-      
-      // Logo if exists
-      if (logo) {
-        pptSlide.addImage({ data: logo, x: 0.5, y: 0.2, w: 1, h: 0.5 });
-      }
+      if (logo) pptSlide.addImage({ data: logo, x: 0.5, y: 0.2, w: 1, h: 0.5 });
 
-      // Title
-      pptSlide.addText(slide.title, { 
-        x: 0.5, y: 1.0, w: '90%', fontSize: 36, bold: true, color: "2DD4BF" 
-      });
-      
-      // Subtitle
-      pptSlide.addText(slide.subtitle, { 
-        x: 0.5, y: 1.8, w: '90%', fontSize: 18, italic: true, color: "94A3B8" 
-      });
+      pptSlide.addText(slide.title, { x: 0.5, y: 1.0, w: '90%', fontSize: 36, bold: true, color: "2DD4BF" });
+      pptSlide.addText(slide.subtitle, { x: 0.5, y: 1.8, w: '90%', fontSize: 18, italic: true, color: "94A3B8" });
+      pptSlide.addText(slide.content, { x: 0.5, y: 2.8, w: '60%', fontSize: 16, color: "F1F5F9", lineSpacing: 1.5 });
 
-      // Content
-      pptSlide.addText(slide.content, { 
-        x: 0.5, y: 2.8, w: '60%', fontSize: 16, color: "F1F5F9", lineSpacing: 1.5 
-      });
-
-      // Metric Box if exists
       if (slide.metric) {
-        pptSlide.addShape(pres.ShapeType.rect, { 
-            x: 7.0, y: 2.5, w: 2.5, h: 2.5, fill: { color: "1E293B" }, line: { color: "2DD4BF", width: 1 } 
-        });
-        pptSlide.addText(slide.metric.split(' ')[0], { 
-            x: 7.0, y: 3.2, w: 2.5, fontSize: 44, bold: true, color: "2DD4BF", align: 'center' 
-        });
-        pptSlide.addText(slide.metric.split(' ').slice(1).join(' '), { 
-            x: 7.0, y: 4.2, w: 2.5, fontSize: 12, bold: true, color: "94A3B8", align: 'center' 
-        });
+        pptSlide.addShape(pres.ShapeType.rect, { x: 7.0, y: 2.5, w: 2.5, h: 2.5, fill: { color: "#1E293B" }, line: { color: "2DD4BF", width: 1 } });
+        pptSlide.addText(slide.metric.split(' ')[0], { x: 7.0, y: 3.2, w: 2.5, fontSize: 44, bold: true, color: "2DD4BF", align: 'center' });
+        pptSlide.addText(slide.metric.split(' ').slice(1).join(' '), { x: 7.0, y: 4.2, w: 2.5, fontSize: 12, bold: true, color: "94A3B8", align: 'center' });
       }
-
-      // Footer
-      pptSlide.addText("TSV-IA Pro Intelligence Report", { 
-        x: 0.5, y: 6.8, w: '90%', fontSize: 10, color: "475569" 
-      });
+      pptSlide.addText("TSV-IA Pro Executive Report", { x: 0.5, y: 6.8, w: '90%', fontSize: 10, color: "475569" });
     });
 
     pres.writeFile({ fileName: `TSV_Report_${new Date().getTime()}.pptx` });
   };
 
-  const handleStart = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setHasStarted(true);
-    }, 1500);
-  };
+  const slides = aiSlides.length > 0 ? aiSlides : [
+    {
+      title: "Generando Presentación Elite...",
+      subtitle: "Analizando KPIs Estratégicos",
+      content: "Transformando datos en hallazgos ejecutivos...",
+      insight: "Por favor espere un momento.",
+      icon: Sparkles
+    }
+  ];
 
   if (!hasStarted) {
     return (

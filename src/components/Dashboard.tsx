@@ -160,7 +160,7 @@ export function Dashboard({ stats, insights }: DashboardProps) {
                     <stop offset="95%" stopColor="#2DD4BF" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? "#1E293B" : "#F1F5F9"} />
                 <XAxis 
                   dataKey="hour" 
                   fontSize={10} 
@@ -181,11 +181,14 @@ export function Dashboard({ stats, insights }: DashboardProps) {
                   contentStyle={{ 
                     borderRadius: '16px', 
                     border: 'none', 
-                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.3)',
                     padding: '12px',
                     fontSize: '12px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    backgroundColor: document.documentElement.classList.contains('dark') ? '#1E293B' : '#FFFFFF',
+                    color: document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1E293B'
                   }}
+                  itemStyle={{ color: document.documentElement.classList.contains('dark') ? '#F1F5F9' : '#1E293B' }}
                 />
                 <Area 
                   type="monotone" 
@@ -221,7 +224,7 @@ export function Dashboard({ stats, insights }: DashboardProps) {
                     nameKey="channel"
                   >
                     {stats.sessionsByChannel.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={4} />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -254,7 +257,7 @@ export function Dashboard({ stats, insights }: DashboardProps) {
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart layout="vertical" data={stats.statsByTipificacion?.slice(0, 6)}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={document.documentElement.classList.contains('dark') ? "#1E293B" : "#F1F5F9"} />
                 <XAxis type="number" hide />
                 <YAxis 
                   dataKey="category" 

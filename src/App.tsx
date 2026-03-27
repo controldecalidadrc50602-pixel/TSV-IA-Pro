@@ -14,7 +14,8 @@ import {
   Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
   History, UploadCloud, Download, Menu, X, MessageSquare,
   LogOut, Save, CheckCircle, Database, Vault, Presentation,
-  Settings as SettingsIcon, Sun, Moon, Image as ImageIcon
+  Settings as SettingsIcon, Sun, Moon, Image as ImageIcon,
+  Sparkles, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,10 +50,13 @@ export default function App() {
 
   // Handle Theme
   useEffect(() => {
+    const root = window.document.documentElement;
     if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
     }
   }, [theme]);
 
@@ -224,6 +228,70 @@ export default function App() {
     });
     setReportName(file.name);
     setActiveTab(targetTab);
+  };
+
+  const generateAISlides = async (): Promise<any[]> => {
+    if (!data) return [];
+    
+    // System Prompt for Elite Executive Analysis
+    const systemPrompt = `Actúa como un Principal Data Scientist & Business Consultant de nivel "Big Four" especializado en Customer Experience y Operaciones.
+    Tu objetivo es analizar métricas de centros de contacto y generar una presentación estratégica de alto impacto para CEOs.
+    REGLA DE ORO: Responde ÚNICAMENTE con un array JSON válido. Sin texto, sin explicaciones.
+    ESTRUCTURA DEL JSON:
+    [
+      {
+        "title": "Título Disruptivo",
+        "subtitle": "Análisis táctico/KPI",
+        "content": "Narrativa ejecutiva profunda (máx 180 caracteres). Usa % de mejora y comparaciones teóricas.",
+        "insight": "Recomendación estratégica clave accionable",
+        "metric": "85.2% SLA",
+        "type": "summary" | "efficiency" | "resolution" | "strategy"
+      }
+    ]
+    Genera exactamente 5 slides cubriendo:
+    1. Executive Perspective (Resumen)
+    2. Operational Excellence (SLA & AHT)
+    3. Automated Resolution (Bot vs Human)
+    4. Critical Friction Points (Anomalías)
+    5. Roadmap of Improvements (Siguientes pasos)`;
+
+    const userMessage = `DATOS OPERATIVOS REALES:
+    - Periodo: ${data.stats.dateRange}
+    - Total Sesiones: ${data.stats.totalSessions}
+    - SLA Compliance: ${data.stats.slaCompliance?.toFixed(1)}%
+    - Tiempo Atención (AHT): ${data.stats.avgDuration}
+    - Eficiencia Conversión: ${data.stats.efficiencyIndex?.toFixed(1)}%
+    - Mix Canales: ${JSON.stringify(data.stats.sessionsByChannel)}
+    - Pico Horario: ${data.stats.peakHour?.hour}:00
+    - Tipificaciones: ${JSON.stringify(data.stats.statsByTipificacion?.slice(0, 3))}
+    
+    Genera la presentación estratégica "Elite Tier" ahora.`;
+
+    try {
+      const response = await fetch('http://localhost:3001/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          messages: [{ role: 'user', content: userMessage }],
+          systemPrompt 
+        })
+      });
+
+      const result = await response.json();
+      const rawText = result.text.replace(/```json|```/g, '').trim();
+      const slides = JSON.parse(rawText);
+      
+      return slides.map((s: any) => ({
+        ...s,
+        icon: s.type === 'summary' ? LayoutDashboard : 
+              s.type === 'efficiency' ? TrendingUp : 
+              s.type === 'resolution' ? Sparkles : 
+              s.type === 'strategy' ? CheckCircle : Presentation
+      }));
+    } catch (err) {
+      console.error("AI Slide Generation Failure:", err);
+      throw err;
+    }
   };
 
   const handleDeleteHistory = async (id: string, e: React.MouseEvent) => {
@@ -415,9 +483,9 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
+      <main className="flex-1 flex flex-col min-w-0 relative bg-brand-gray dark:bg-dark-bg transition-colors duration-300">
         {/* Top Bar */}
-        <header className="h-20 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-slate-200 dark:border-dark-border flex items-center justify-between px-8 z-10 sticky top-0 transition-colors">
+        <header className="h-20 bg-white dark:bg-dark-card border-b border-slate-200 dark:border-dark-border flex items-center justify-between px-8 z-10 sticky top-0 transition-colors duration-300">
           <div>
             <h2 className="text-xl font-bold text-brand-dark dark:text-white">
               {activeTab === 'upload' && 'Nueva Lectura'}
@@ -553,6 +621,7 @@ export default function App() {
                   insights={data.insights} 
                   onBack={() => setActiveTab('dashboard')}
                   logo={logo}
+                  onGenerateSlides={generateAISlides}
                 />
               </motion.div>
             )}
