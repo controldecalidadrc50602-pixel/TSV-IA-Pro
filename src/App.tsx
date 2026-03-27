@@ -18,7 +18,7 @@ import {
   Sparkles, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { supabase, isCloudEnabled } from '@/lib/supabase';
 import { Auth } from '@/components/Auth';
 import { Session } from '@supabase/supabase-js';
 
@@ -66,6 +66,11 @@ export default function App() {
 
   // Handle Auth Session
   useEffect(() => {
+    if (!isCloudEnabled) {
+      setAuthLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
@@ -423,7 +428,7 @@ export default function App() {
     );
   }
 
-  if (!session) {
+  if (!session && isCloudEnabled) {
     return <Auth />;
   }
 
@@ -500,16 +505,18 @@ export default function App() {
                 {isSidebarOpen && (theme === 'light' ? "Modo Oscuro" : "Modo Claro")}
             </button>
             
-            <button
-                onClick={() => supabase.auth.signOut()}
-                className={cn(
-                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors text-sm font-medium",
-                !isSidebarOpen && "justify-center px-0"
-                )}
-            >
-                <LogOut size={18} />
-                {isSidebarOpen && "Cerrar Sesión"}
-            </button>
+             {isCloudEnabled && (
+               <button
+                   onClick={() => supabase.auth.signOut()}
+                   className={cn(
+                   "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors text-sm font-medium",
+                   !isSidebarOpen && "justify-center px-0"
+                   )}
+               >
+                   <LogOut size={18} />
+                   {isSidebarOpen && "Cerrar Sesión"}
+               </button>
+             )}
           </div>
         </div>
       </aside>
