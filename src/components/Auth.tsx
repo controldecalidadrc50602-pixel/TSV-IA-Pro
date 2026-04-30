@@ -97,21 +97,37 @@ export function Auth() {
             )}
           </AnimatePresence>
 
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand-turquoise hover:bg-brand-turquoise/90 text-slate-950 font-black py-4 rounded-2xl shadow-xl shadow-brand-turquoise/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <>
-                {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
-                <span>{isLogin ? "Iniciar Sesión Elite" : "Crear Cuenta Business"}</span>
-                <Sparkles size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-              </>
-            )}
-          </button>
+          {!supabase && (
+            <button 
+              type="button"
+              onClick={() => {
+                localStorage.setItem('tsv_mock_session', 'true');
+                window.location.reload();
+              }}
+              className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+            >
+              <ShieldCheck size={20} className="text-brand-turquoise" />
+              <span>Acceder en Modo Local</span>
+            </button>
+          )}
+
+          {supabase && (
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-turquoise hover:bg-brand-turquoise/90 text-slate-950 font-black py-4 rounded-2xl shadow-xl shadow-brand-turquoise/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
+                  <span>{isLogin ? "Iniciar Sesión Elite" : "Crear Cuenta Business"}</span>
+                  <Sparkles size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                </>
+              )}
+            </button>
+          )}
 
           <div className="relative py-4">
             <div className="absolute inset-0 flex items-center">

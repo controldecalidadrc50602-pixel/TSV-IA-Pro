@@ -24,6 +24,7 @@ export interface DataStats {
   statsByStatus: { status: string; count: number }[];
   totalTransfers: number;
   totalResponses: number;
+  anomalies?: { column: string; row_index: number; value: number; severity: 'high' | 'medium' }[];
   // Metadata for schema-agnostic UI
   detectedSchema?: {
     categorical: string[];
@@ -237,6 +238,44 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
 
   const userIdx = columnProfiles.find(p => p.normHeader.includes('user') || p.normHeader.includes('usuario') || p.normHeader.includes('cliente') || (p.isId && p.normHeader.includes('id')))?.index ?? 0;
 
+  // ─── Anomaly Detection Engine ──────────────────────────────────────────────
+  const numericalCols = columnProfiles.filter(p => p.isNumeric);
+  const anomalies: { column: string; row_index: number; value: number; severity: 'high' | 'medium' }[] = [];
+
+  numericalCols.forEach(col => {
+    const values = rows.map(r => Number(r[col.index])).filter(v => !isNaN(v));
+    if (values.length < 5) return;
+
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / values.length);
+
+    if (stdDev === 0) return;
+
+    rows.forEach((row, idx) => {
+      const val = Number(row[col.index]);
+      const zScore = Math.abs((val - mean) / stdDev);
+      
+      if (zScore > 3) {
+        anomalies.push({ column: col.header, row_index: idx, value: val, severity: 'high' });
+      } else if (zScore > 2) {
+        anomalies.push({ column: col.header, row_index: idx, value: val, severity: 'medium' });
+      }
+    });
+  });
+
+  // ─── Data Auto-Sanitization ───────────────────────────────────────────────
+  const sanitizedRows = rows.map(row => {
+    const newRow = [...row];
+    newRow.forEach((val, i) => {
+      let sVal = String(val).trim();
+      if (sVal.startsWith('$') || sVal.includes(',')) {
+        sVal = sVal.replace(/[$,]/g, '');
+        if (!isNaN(Number(sVal))) newRow[i] = sVal;
+      }
+    });
+    return newRow;
+  });
+
   return {
     processedRows,
     stats: {
@@ -255,6 +294,7 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       efficiencyIndex,
       totalTransfers,
       totalResponses,
+      anomalies,
       peakHour: sessionsByHour.reduce((p, c) => (p.count > c.count) ? p : c, sessionsByHour[0]),
       detectedSchema: {
         categorical: categoricalProfiles.map(p => p.header),

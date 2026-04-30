@@ -1,81 +1,57 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
 
-@theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  
-  --color-brand-turquoise: #2DD4BF;
-  --color-brand-dark: #0F172A;
-  --color-brand-gray: #F8FAFC;
-  --color-brand-text: #1E293B;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  /* Dark Mode Palette - Deep Obsidian */
-  --color-dark-bg: #030712; /* Gray 950 */
-  --color-dark-card: #0F172A; /* Slate 900 */
-  --color-dark-border: #1E293B; /* Slate 800 */
-  --color-dark-text: #F8FAFC;
+:root {
+  --brand-turquoise: #2DD4BF;
+  --dark-bg: #0B0F1A;
+  --dark-card: #151B2B;
+  --dark-border: #1E293B;
 }
 
-@layer base {
-  * {
-    @apply border-slate-200 dark:border-slate-800 transition-colors duration-300;
-  }
-  
-  html {
-    @apply antialiased scroll-smooth;
-  }
-
-  body {
-    @apply bg-brand-gray text-brand-text selection:bg-teal-100 selection:text-teal-900;
-  }
-
-  .dark body {
-    @apply bg-dark-bg text-slate-200 selection:bg-teal-500/30 selection:text-teal-100;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-extrabold tracking-tight dark:text-white;
-  }
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  @apply bg-slate-50 text-slate-900 transition-colors duration-300;
 }
 
-@layer utilities {
-  .glass {
-    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-2xl;
-  }
-  
-  .premium-card {
-    @apply bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-xl hover:border-brand-turquoise/30 transition-all duration-500;
-  }
-
-  .text-gradient {
-    @apply bg-gradient-to-br from-brand-turquoise to-emerald-500 bg-clip-text text-transparent;
-  }
-
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+/* ─── Global Dark Mode Overrides ─── */
+.dark {
+  color-scheme: dark;
 }
 
-/* Print Styles */
-@media print {
-  body * { visibility: hidden; }
-  #root, #root * { visibility: visible; }
-  .no-print, aside, header, .chat-overlay, button { display: none !important; }
+.dark body {
+  background-color: var(--dark-bg);
+  color: #F8FAFC;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.dark .bg-white {
+  background-color: var(--dark-card) !important;
 }
 
-.animate-in {
-  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.dark .text-slate-800, 
+.dark .text-slate-900, 
+.dark .text-brand-dark,
+.dark .text-slate-700 {
+  color: #F1F5F9 !important;
+}
+
+.dark .border-slate-100, 
+.dark .border-slate-200 {
+  border-color: var(--dark-border) !important;
+}
+
+/* ─── Premium Components ─── */
+.premium-card {
+  @apply bg-white dark:bg-dark-card border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-none transition-all duration-500;
+}
+
+.glass-startup {
+  @apply bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl border border-white/10 dark:border-slate-700/30;
 }
 
 .icon-shadow {
@@ -84,4 +60,23 @@
 
 .dark .icon-shadow {
   filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.4));
+}
+
+/* ─── Custom Scrollbar ─── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full;
+}
+
+/* ─── Print Optimization ─── */
+@media print {
+  body { background: white !important; color: black !important; }
+  aside, button, .no-print, nav { display: none !important; }
+  main { margin: 0 !important; width: 100% !important; }
+  .premium-card { border: 1px solid #eee !important; box-shadow: none !important; }
 }

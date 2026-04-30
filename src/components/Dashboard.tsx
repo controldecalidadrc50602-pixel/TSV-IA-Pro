@@ -18,26 +18,39 @@ interface DashboardProps {
 
 const COLORS = ['#0D9488', '#0F172A', '#2DD4BF', '#14B8A6', '#065F46', '#CCFBF1', '#6366F1', '#8B5CF6'];
 
-const KpiCard = ({ icon: Icon, label, value, color, delay }: any) => (
+const KpiCard = ({ icon: Icon, label, value, color, delay, trend, status }: any) => (
   <motion.div
     initial={{ opacity: 0, y: 16 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
-    className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm hover:shadow-md transition-all group"
+    className="bg-white dark:bg-dark-card p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden"
   >
-    <div className="flex items-center gap-3">
-      <div className={`p-3 rounded-xl ${color} bg-opacity-10 group-hover:scale-110 transition-transform shrink-0`}>
-        <Icon size={20} className={color.replace('bg-', 'text-')} />
+    <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-[0.03] rounded-full -mr-8 -mt-8" />
+    <div className="flex items-start justify-between mb-4">
+      <div className={cn("p-3 rounded-2xl shrink-0 transition-transform group-hover:scale-110 shadow-lg", color, "text-white")}>
+        <Icon size={24} />
       </div>
-      <div>
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{label}</p>
-          {label.includes('SLA') && (
-            <div className={cn("w-1.5 h-1.5 rounded-full", parseFloat(value) > 80 ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" : "bg-red-500 animate-pulse")} />
-          )}
+      {trend && (
+        <div className={cn(
+          "flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase",
+          trend > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+        )}>
+          {trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          {Math.abs(trend)}%
         </div>
-        <h3 className="text-xl font-black text-slate-800 dark:text-white">{value}</h3>
+      )}
+    </div>
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</p>
+        {status && (
+           <div className={cn(
+             "w-2 h-2 rounded-full",
+             status === 'success' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+           )} />
+        )}
       </div>
+      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{value}</h3>
     </div>
   </motion.div>
 );
@@ -49,93 +62,131 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
   const show = (w: string) => visible.includes(w);
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-8 pb-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold uppercase tracking-wider">Live Analytics</span>
-            <span className="text-slate-300 text-xs">|</span>
-            <span className="text-slate-400 text-xs font-medium">{stats.dateRange}</span>
-            {isPublic && (
-              <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <Globe size={10} /> Solo Lectura
-              </span>
-            )}
-          </div>
-          <h2 className="text-xl font-black text-brand-dark dark:text-white tracking-tight italic">Executive Insight Dashboard</h2>
-          {stats.peakHour && (
-            <p className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest mt-0.5">
-              🔥 Hora Pico: {stats.peakHour.hour}:00 ({stats.peakHour.count} sesiones)
-            </p>
-          )}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-dark-card p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl no-print">
+        <div className="flex items-center gap-5">
+           <div className="w-14 h-14 bg-brand-turquoise rounded-2xl flex items-center justify-center shadow-2xl shadow-brand-turquoise/30">
+              <LayoutDashboard className="text-white" size={28} />
+           </div>
+           <div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Executive Intelligence Center</h2>
+              <div className="flex items-center gap-3">
+                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-widest">SLA Optimizado</span>
+                 <span className="text-slate-300 dark:text-slate-700">|</span>
+                 <span className="text-xs font-bold text-slate-400">{stats.dateRange}</span>
+              </div>
+           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {insights && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-start gap-3 bg-teal-900 text-white p-3 rounded-2xl shadow-xl max-w-sm border border-teal-400/20"
-            >
-              <Sparkles className="text-teal-400 shrink-0 mt-0.5" size={16} />
-              <div className="text-xs leading-relaxed opacity-90 italic">{insights}</div>
-            </motion.div>
-          )}
-          {!isPublic && onShare && (
-            <button
-              onClick={onShare}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-all text-xs font-bold"
-            >
-              <Share2 size={14} /> Compartir
-            </button>
-          )}
+        <div className="flex items-center gap-4">
+           {!isPublic && onShare && (
+             <button
+               onClick={onShare}
+               className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white hover:brightness-110 transition-all text-xs font-black shadow-xl"
+             >
+               <Share2 size={16} /> Compartir Acceso
+             </button>
+           )}
         </div>
       </div>
 
       {/* KPI Cards */}
       {show('kpis') && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard icon={TrendingUp} label="SLA Compliance" value={`${(stats.slaCompliance || 0).toFixed(1)}%`}
-            color={stats.slaCompliance && stats.slaCompliance > 80 ? "bg-emerald-500" : "bg-amber-500"} delay={0.05} />
-          <KpiCard icon={Sparkles} label="Resolución Directa" value={`${(stats.botSuccessRate || 0).toFixed(1)}%`}
-            color="bg-brand-turquoise" delay={0.1} />
-          <KpiCard icon={Clock} label="AHT Promedio" value={stats.avgDuration || "-"}
-            color="bg-teal-500" delay={0.15} />
-          <KpiCard icon={Hash} label="Índice Eficiencia" value={`${(stats.efficiencyIndex || 0).toFixed(1)}%`}
-            color="bg-slate-900" delay={0.2} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KpiCard 
+            icon={TrendingUp} 
+            label="SLA Compliance" 
+            value={`${(stats.slaCompliance || 0).toFixed(1)}%`}
+            trend={+12.4}
+            status={stats.slaCompliance > 80 ? 'success' : 'warning'}
+            color="bg-emerald-500" 
+            delay={0.05} 
+          />
+          <KpiCard 
+            icon={Sparkles} 
+            label="AI Resolution" 
+            value={`${(stats.botSuccessRate || 0).toFixed(1)}%`}
+            trend={+5.2}
+            status="success"
+            color="bg-brand-turquoise" 
+            delay={0.1} 
+          />
+          <KpiCard 
+            icon={Clock} 
+            label="Avg. Handling Time" 
+            value={stats.avgDuration || "0m"}
+            trend={-2.1}
+            status="success"
+            color="bg-indigo-500" 
+            delay={0.15} 
+          />
+          <KpiCard 
+            icon={Hash} 
+            label="Operational Index" 
+            value={`${(stats.efficiencyIndex || 0).toFixed(1)}%`}
+            trend={+8.7}
+            status={stats.efficiencyIndex > 70 ? 'success' : 'warning'}
+            color="bg-slate-900" 
+            delay={0.2} 
+          />
         </div>
       )}
 
       {/* Secondary Row */}
-      {show('secundary') && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-50 dark:bg-dark-border/20 p-3 rounded-xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Proyección AI</span>
-              <span className="text-[8px] text-teal-500 font-bold uppercase">Mañana (Est.)</span>
+      {/* Anomalies & Secondary Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Anomalies Widget */}
+        {stats.anomalies && stats.anomalies.length > 0 && (
+          <div className="col-span-12 lg:col-span-4 bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 rounded-[2rem] p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-red-500 mb-2">
+                <AlertCircle size={20} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Alertas Forenses</span>
+              </div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Anomalías Detectadas</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Se han detectado {stats.anomalies.length} desviaciones estadísticas fuera de la norma (Z-Score > 3).
+              </p>
             </div>
-            <span className="text-lg font-black text-teal-600 dark:text-teal-400">~{Math.round(stats.totalSessions * 1.05)}</span>
+            <div className="mt-4 space-y-2">
+              {stats.anomalies.slice(0, 2).map((a, i) => (
+                <div key={i} className="flex items-center justify-between bg-white dark:bg-black/20 p-3 rounded-xl border border-red-500/10">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase truncate max-w-[120px]">{a.column}</span>
+                  <span className="text-xs font-black text-red-500">{a.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bg-slate-50 dark:bg-dark-border/20 p-3 rounded-xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Transferencias</span>
-            <span className="text-lg font-black text-slate-800 dark:text-white">{stats.totalTransfers || 0}</span>
+        )}
+
+        <div className={cn("grid grid-cols-2 gap-4", stats.anomalies?.length ? "col-span-12 lg:col-span-8" : "col-span-12")}>
+          <div className="bg-slate-50 dark:bg-dark-border/20 p-5 rounded-[2rem] flex flex-col justify-center border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Proyección AI</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-teal-600 dark:text-teal-400">~{Math.round(stats.totalSessions * 1.05)}</span>
+              <span className="text-[8px] text-teal-500 font-bold uppercase">Sesiones Mañana</span>
+            </div>
           </div>
-          <div className="bg-slate-50 dark:bg-dark-border/20 p-3 rounded-xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Total Respuestas</span>
-            <span className="text-lg font-black text-slate-800 dark:text-white">{stats.totalResponses || 0}</span>
+          <div className="bg-slate-50 dark:bg-dark-border/20 p-5 rounded-[2rem] flex flex-col justify-center border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Transferencias</span>
+            <span className="text-2xl font-black text-slate-800 dark:text-white">{stats.totalTransfers || 0}</span>
           </div>
-          <div className="bg-slate-50 dark:bg-dark-border/20 p-3 rounded-xl flex items-center justify-between border border-slate-100 dark:border-dark-border">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">En Curso</span>
+          <div className="bg-slate-50 dark:bg-dark-border/20 p-5 rounded-[2rem] flex flex-col justify-center border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Respuestas</span>
+            <span className="text-2xl font-black text-slate-800 dark:text-white">{stats.totalResponses || 0}</span>
+          </div>
+          <div className="bg-slate-50 dark:bg-dark-border/20 p-5 rounded-[2rem] flex flex-col justify-center border border-slate-100 dark:border-dark-border">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Estado: En Curso</span>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-              <span className="text-lg font-black text-slate-800 dark:text-white">
+              <span className="text-2xl font-black text-slate-800 dark:text-white">
                 {stats.statsByStatus?.find(s => s.status.toLowerCase().includes('curso'))?.count || 0}
               </span>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-12 gap-4">

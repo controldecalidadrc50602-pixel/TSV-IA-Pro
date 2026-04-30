@@ -68,11 +68,15 @@ export default function App() {
     } catch (err) {
       console.error("Error during sign out", err);
     }
+    // Deep Clean All States
+    localStorage.removeItem('sb-bammnxoagqskukktddhl-auth-token');
+    localStorage.removeItem('tsv_mock_session');
+    localStorage.removeItem('tsv_session_active');
     setSession(null);
     setData(null);
     setActiveProject(null);
     setHistoryFiles([]);
-    localStorage.removeItem('sb-bammnxoagqskukktddhl-auth-token'); 
+    window.location.reload();
   };
 
   // Hash Routing para Public Dashboard
@@ -100,15 +104,37 @@ export default function App() {
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
-      root.style.colorScheme = 'dark';
+      root.classList.remove('light');
     } else {
+      root.classList.add('light');
       root.classList.remove('dark');
-      root.style.colorScheme = 'light';
     }
+    localStorage.setItem('tsv_theme', theme);
   }, [theme]);
+
+  // Set initial theme from storage or meta
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('tsv_theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
 
   // Handle Auth Session
   useEffect(() => {
+    // 1. Check for Mock Session (Local Mode)
+    const isMock = localStorage.getItem('tsv_mock_session') === 'true';
+    if (isMock && !isCloudEnabled) {
+      setSession({
+        user: { email: 'admin@local.pro', id: 'local-admin-uuid' },
+        access_token: 'mock-token',
+        expires_at: 9999999999
+      } as any);
+      setAuthLoading(false);
+      return;
+    }
+
+    // 2. Real Auth (Cloud Mode)
     if (!isCloudEnabled) {
       setAuthLoading(false);
       return;
@@ -126,30 +152,21 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Set initial theme from storage or meta
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
-
-  // Persist theme
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
   // Apply Brand Color from Project
   useEffect(() => {
     const root = window.document.documentElement;
-    const brandColor = activeProject?.brand_color || '#2DD4BF';
-    root.style.setProperty('--color-brand-turquoise', brandColor);
+    const brandColor = activeProject?.settings?.brand_color || '#06b6d4';
+    root.style.setProperty('--brand-turquoise', brandColor);
     
     // Generar variante oscura del color de marca para sombras y efectos
-    const r = parseInt(brandColor.slice(1, 3), 16);
-    const g = parseInt(brandColor.slice(3, 5), 16);
-    const b = parseInt(brandColor.slice(5, 7), 16);
-    root.style.setProperty('--brand-rgb', `${r}, ${g}, ${b}`);
+    try {
+      const r = parseInt(brandColor.slice(1, 3), 16);
+      const g = parseInt(brandColor.slice(3, 5), 16);
+      const b = parseInt(brandColor.slice(5, 7), 16);
+      root.style.setProperty('--brand-rgb', `${r}, ${g}, ${b}`);
+    } catch (e) {
+      root.style.setProperty('--brand-rgb', '6, 182, 212');
+    }
   }, [activeProject]);
 
   // Load history and sync data when session or project changes
@@ -220,7 +237,8 @@ export default function App() {
   const generateAutoInsights = async (summary: string, stats: DataStats) => {
     setInsightsLoading(true);
     try {
-      const response = await fetch('/api/insights', {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/api/insights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ summary, stats })
@@ -461,7 +479,7 @@ export default function App() {
     );
   }
 
-  if (!session && isCloudEnabled && !publicShareId) {
+  if (!session && !publicShareId) {
     return <Auth />;
   }
 

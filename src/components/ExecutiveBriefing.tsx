@@ -33,7 +33,7 @@ export function ExecutiveBriefing({ isOpen, onClose, stats, insights }: Executiv
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="w-full max-w-4xl bg-white dark:bg-dark-card rounded-[2.5rem] border border-slate-200 dark:border-dark-border shadow-2xl relative z-10 overflow-hidden flex flex-col md:flex-row"
+            className="w-full max-w-4xl bg-white dark:bg-dark-card rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl relative z-10 overflow-hidden flex flex-col md:flex-row"
           >
             {/* Visual Side */}
             <div className="w-full md:w-2/5 bg-slate-900 p-8 flex flex-col justify-between relative overflow-hidden">
@@ -70,13 +70,13 @@ export function ExecutiveBriefing({ isOpen, onClose, stats, insights }: Executiv
                    <Zap size={12} className="text-amber-500" /> Anomalies Detected
                  </div>
                  <p className="text-xs text-slate-400">
-                   Peak hour at {stats.peakHour?.hour}:00 with {stats.peakHour?.count} sessions. Recommend scaling capacity.
+                   Peak hour at {stats.peakHour?.hour}:00 with {stats.peakHour?.count} sessions.
                  </p>
                </div>
             </div>
 
             {/* Narrative Side */}
-            <div className="w-full md:w-3/5 p-8 md:p-12 flex flex-col">
+            <div className="w-full md:w-3/5 p-8 md:p-12 flex flex-col bg-white dark:bg-dark-card">
               <div className="flex items-center justify-between mb-8">
                  <div className="flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-brand-turquoise/10 flex items-center justify-center text-brand-turquoise">
@@ -84,7 +84,7 @@ export function ExecutiveBriefing({ isOpen, onClose, stats, insights }: Executiv
                    </div>
                    <div>
                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Intelligence</p>
-                     <p className="text-xs font-bold text-slate-800 dark:text-white">Narrativa Estratégica</p>
+                     <p className="text-xs font-bold text-slate-900 dark:text-white">Narrativa Estratégica</p>
                    </div>
                  </div>
                  <button 
@@ -97,9 +97,9 @@ export function ExecutiveBriefing({ isOpen, onClose, stats, insights }: Executiv
 
               <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
                 <div className="prose prose-slate dark:prose-invert">
-                   <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">
-                     "{insights || 'Analizando tendencias actuales para generar tu reporte ejecutivo... Por favor espera un momento.'}"
-                   </p>
+                    <p className="text-xl text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic">
+                      "{insights || 'Analizando tendencias actuales para generar tu reporte ejecutivo... Por favor espera un momento.'}"
+                    </p>
                 </div>
               </div>
 
