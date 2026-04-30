@@ -104,6 +104,9 @@ export async function deleteFile(id: string) {
 
 export async function savePublicShare(reportName: string, stats: DataStats, summary: string, brandColor?: string): Promise<string> {
   const id = crypto.randomUUID();
+  const shareData = {
+    id,
+    reportName,
     stats,
     summary,
     brandColor,
