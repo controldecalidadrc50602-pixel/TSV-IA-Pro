@@ -1,80 +1,71 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --brand-turquoise: #2DD4BF;
-  --dark-bg: #0B0F1A;
-  --dark-card: #151B2B;
-  --dark-border: #1E293B;
+@theme {
+  --color-brand-turquoise: #06b6d4;
+  --color-brand-dark: #0f172a;
+  --color-brand-gray: #f8fafc;
+  
+  --color-dark-bg: #020617;
+  --color-dark-card: #0f172a;
+  --color-dark-border: #1e293b;
 }
 
-body {
-  margin: 0;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+@layer base {
+  :root {
+    --brand-turquoise: #06b6d4;
+    --brand-dark: #0f172a;
+    --brand-gray: #f8fafc;
+    --brand-rgb: 6, 182, 212;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .dark {
+    --brand-gray: #020617;
+    --brand-dark: #f8fafc;
+    background-color: var(--color-dark-bg);
+    color: white;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased transition-colors duration-300;
+  }
+
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
 }
 
-/* ─── Global Dark Mode Overrides ─── */
-.dark {
-  color-scheme: dark;
+@layer components {
+  .premium-card {
+    @apply bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500;
+  }
+
+  .glass-startup {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/5;
+  }
+
+  .icon-shadow {
+    filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.3));
+  }
 }
 
-.dark body {
-  background-color: var(--dark-bg);
-  color: #F8FAFC;
-}
-
-.dark .bg-white {
-  background-color: var(--dark-card) !important;
-}
-
-.dark .text-slate-800, 
-.dark .text-slate-900, 
-.dark .text-brand-dark,
-.dark .text-slate-700 {
-  color: #F1F5F9 !important;
-}
-
-.dark .border-slate-100, 
-.dark .border-slate-200 {
-  border-color: var(--dark-border) !important;
-}
-
-/* ─── Premium Components ─── */
-.premium-card {
-  @apply bg-white dark:bg-dark-card border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-none transition-all duration-500;
-}
-
-.glass-startup {
-  @apply bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl border border-white/10 dark:border-slate-700/30;
-}
-
-.icon-shadow {
-  filter: drop-shadow(0 2px 4px rgba(45, 212, 191, 0.2));
-}
-
-.dark .icon-shadow {
-  filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.4));
-}
-
-/* ─── Custom Scrollbar ─── */
-.custom-scrollbar::-webkit-scrollbar {
+/* Custom Scrollbar */
+::-webkit-scrollbar {
   width: 6px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 dark:bg-slate-800 rounded-full;
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-brand-turquoise transition-colors;
 }
 
-/* ─── Print Optimization ─── */
 @media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
   body { background: white !important; color: black !important; }
   aside, button, .no-print, nav { display: none !important; }
   main { margin: 0 !important; width: 100% !important; }
