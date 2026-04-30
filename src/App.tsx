@@ -897,51 +897,80 @@ export default function App() {
             {activeTab === 'history' && (
               <motion.div 
                 key="history"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="max-w-5xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="max-w-6xl mx-auto px-4"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex items-center justify-between mb-10">
+                   <div>
+                      <h2 className="text-3xl font-black text-slate-800 dark:text-white">Bóveda de Inteligencia</h2>
+                      <p className="text-sm text-slate-500 mt-1">
+                        {activeProject ? `Archivos aislados para ${activeProject.name}` : 'Reportes en tu espacio personal'}
+                      </p>
+                   </div>
+                   <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <Vault size={16} className="text-brand-turquoise" />
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{historyFiles.length} Archivos</span>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {historyFiles.length > 0 ? (
                     historyFiles.map((file) => (
                       <div 
                         key={file.id}
-                        className="bg-white dark:bg-dark-card p-5 rounded-3xl border border-slate-100 dark:border-dark-border hover:border-brand-turquoise hover:shadow-xl hover:shadow-brand-turquoise/5 transition-all group relative flex flex-col h-full"
+                        className="premium-card p-6 flex flex-col h-full relative group overflow-hidden"
                       >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="p-3 bg-brand-gray dark:bg-slate-800 text-slate-500 rounded-2xl group-hover:bg-brand-turquoise group-hover:text-white transition-colors">
-                            <TableIcon size={24} />
+                        {/* Project Badge */}
+                        <div className="absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl bg-brand-turquoise/10 text-brand-turquoise text-[9px] font-black uppercase tracking-widest border-l border-b border-brand-turquoise/20">
+                           {activeProject?.name || 'Personal'}
+                        </div>
+
+                        <div className="flex items-start justify-between mb-6">
+                          <div className={cn(
+                             "w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-6 shadow-lg",
+                             activeProject ? "bg-brand-turquoise text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                          )}>
+                            <Database size={28} />
                           </div>
                           <button 
                             onClick={(e) => handleDeleteHistory(file.id, e)}
-                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                           >
-                            <X size={18} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                         
-                        <h3 className="font-bold text-brand-dark dark:text-white text-lg mb-1 truncate" title={file.name}>{file.name}</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Reporte ID: {file.id.slice(0, 8)}</p>
+                        <h3 className="font-extrabold text-slate-900 dark:text-white text-xl mb-1 truncate leading-tight" title={file.name}>
+                          {file.name}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">UUID: {file.id.slice(0, 8)}</p>
                         
-                        <div className="mt-auto space-y-2 pt-4 border-t border-slate-50 dark:border-dark-border/50">
-                           <div className="flex items-center justify-between mb-4">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">{new Date(file.date).toLocaleDateString()}</span>
-                              <span className="text-[10px] font-bold text-brand-turquoise uppercase">{file.data.length} Filas</span>
+                        <div className="mt-auto space-y-4">
+                           <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                              <div className="flex flex-col">
+                                 <span className="text-[9px] font-black text-slate-400 uppercase">Fecha</span>
+                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{new Date(file.date).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex flex-col text-right">
+                                 <span className="text-[9px] font-black text-slate-400 uppercase">Registros</span>
+                                 <span className="text-xs font-bold text-brand-turquoise">{file.data.length.toLocaleString()}</span>
+                              </div>
                            </div>
                            
-                           <div className="grid grid-cols-2 gap-2">
+                           <div className="grid grid-cols-2 gap-3">
                                <button 
                                 onClick={() => loadFromHistory(file, 'dashboard')}
-                                className="flex items-center justify-center gap-2 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-brand-turquoise hover:text-white text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+                                className="flex items-center justify-center gap-2 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-brand-turquoise text-white rounded-2xl text-xs font-black transition-all shadow-lg hover:shadow-brand-turquoise/20"
                                >
                                   <LayoutDashboard size={14} /> Dashboard
                                </button>
                                <button 
-                                onClick={() => loadFromHistory(file, 'presentation')}
-                                className="flex items-center justify-center gap-2 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-brand-turquoise hover:text-white text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+                                onClick={() => loadFromHistory(file, 'viewer')}
+                                className="flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-brand-turquoise hover:text-brand-turquoise text-slate-600 dark:text-slate-200 rounded-2xl text-xs font-bold transition-all"
                                >
-                                  <Presentation size={14} /> Presentar
+                                  <TableIcon size={14} /> Visor
                                </button>
                            </div>
                         </div>
