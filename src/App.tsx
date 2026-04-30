@@ -6,7 +6,7 @@ import { DataTable } from '@/components/DataTable';
 import { Dashboard } from '@/components/Dashboard';
 import { PresentationMode } from '@/components/PresentationMode';
 import { ChatAssistant } from '@/components/ChatAssistant';
-import { Login } from '@/components/Login';
+import { InsightsBar, Finding } from '@/components/InsightsBar';
 import { processData, generateDataSummary, DataStats } from '@/lib/data-processor';
 import { saveFile, getFiles, deleteFile } from '@/lib/storage';
 import { motion, AnimatePresence } from 'motion/react';
@@ -46,6 +46,9 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['workspace', 'analytics']);
   const [reportName, setReportName] = useState('');
+  const [insightsFindings, setInsightsFindings] = useState<Finding[]>([]);
+  const [insightsSummary, setInsightsSummary] = useState<string>('');
+  const [insightsLoading, setInsightsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(localStorage.getItem('tsv_logo'));
 
   useEffect(() => {
@@ -145,26 +148,35 @@ export default function App() {
       setActiveTab('dashboard'); // Auto switch to dashboard
       setIsLoading(false);
 
+      // Reset previous insights
+      setInsightsFindings([]);
+      setInsightsSummary('');
+
       // Trigger Auto-Insights in background
-      generateAutoInsights(summary);
+      generateAutoInsights(summary, stats);
   };
 
-  const generateAutoInsights = async (summary: string) => {
+  const generateAutoInsights = async (summary: string, stats: DataStats) => {
+    setInsightsLoading(true);
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: "Genera un análisis ejecutivo rápido de estos datos en 3 bullet points." }],
-          systemPrompt: `Eres un analista experto. Analiza este resumen y extrae 3 hallazgos clave o anomalías:\n${summary}`
-        })
+        body: JSON.stringify({ summary, stats })
       });
       if (response.ok) {
-        const data = await response.json();
-        setData(prev => prev ? { ...prev, insights: data.text } : null);
+        const result = await response.json();
+        setInsightsFindings(result.findings ?? []);
+        setInsightsSummary(result.executiveSummary ?? '');
+        // Backward compat: set text insights for PresentationMode
+        if (result.executiveSummary) {
+          setData(prev => prev ? { ...prev, insights: result.executiveSummary } : null);
+        }
       }
     } catch (err) {
-      console.error("Auto-insights error", err);
+      console.error('Auto-insights error', err);
+    } finally {
+      setInsightsLoading(false);
     }
   };
 
@@ -270,59 +282,17 @@ export default function App() {
 
   const generateAISlides = async (): Promise<any[]> => {
     if (!data) return [];
-    
-    const systemPrompt = `Actúa como un Consultor Estratégico Senior (Ex-McKinsey). 
-    Tu objetivo es analizar los datos operativos cargados y generar una presentación ejecutiva de alta gama.
-    IMPORTANTE: Usa los datos REALES proporcionados para encontrar correlaciones y proyecciones.
-    REGLA: Responde ÚNICAMENTE con un array JSON.
-    ESTRUCTURA:
-    [
-      {
-        "title": "Título Directivo",
-        "subtitle": "Insight de valor",
-        "content": "Análisis profundo basado en los datos (ej: 'El canal X domina el 40% de la carga')",
-        "insight": "Recomendación táctica",
-        "metric": "Valor %",
-        "type": "summary" | "efficiency" | "resolution" | "strategy"
-      }
-    ]
-    Genera 5 slides que cuenten una historia: Situación actual, Eficiencia, Automatización, Cuellos de botella y Plan de Acción.`;
-
-    const userMessage = `DATASET CARGADO:
-    - Periodo: ${data.stats.dateRange}
-    - Total: ${data.stats.totalSessions} sesiones
-    - Canales (Mix): ${JSON.stringify(data.stats.sessionsByChannel.map(c => `${c.channel}: ${c.count}`))}
-    - SLA: ${data.stats.slaCompliance?.toFixed(2)}%
-    - AHT: ${data.stats.avgDuration}
-    - Tipificaciones: ${JSON.stringify(data.stats.statsByTipificacion?.slice(0, 5))}
-    - Peak Hour: ${data.stats.peakHour?.hour}:00
-    - Transf Rate: ${((data.stats.totalTransfers / data.stats.totalSessions) * 100).toFixed(1)}%
-    
-    Genera el análisis estratégico ahora.`;
-
     try {
-      const response = await fetch('http://localhost:3001/api/chat', {
+      const response = await fetch('/api/slides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: [{ role: 'user', content: userMessage }],
-          systemPrompt 
-        })
+        body: JSON.stringify({ stats: data.stats, summary: data.summary })
       });
-
+      if (!response.ok) throw new Error('Slides API error');
       const result = await response.json();
-      const rawText = result.text.replace(/```json|```/g, '').trim();
-      const slides = JSON.parse(rawText);
-      
-      return slides.map((s: any) => ({
-        ...s,
-        icon: s.type === 'summary' ? LayoutDashboard : 
-              s.type === 'efficiency' ? TrendingUp : 
-              s.type === 'resolution' ? Sparkles : 
-              s.type === 'strategy' ? CheckCircle : Presentation
-      }));
+      return result.slides ?? [];
     } catch (err) {
-      console.error("AI Slide Generation Failure:", err);
+      console.error('AI Slide Generation Failure:', err);
       throw err;
     }
   };
@@ -582,6 +552,16 @@ export default function App() {
           </div>
         </header>
 
+        {/* Insights Bar */}
+        {data && (insightsFindings.length > 0 || insightsLoading) && (
+          <InsightsBar
+            findings={insightsFindings}
+            executiveSummary={insightsSummary}
+            isLoading={insightsLoading}
+            onDismiss={() => { setInsightsFindings([]); setInsightsSummary(''); }}
+          />
+        )}
+
         {/* Content Area */}
         <div className="flex-1 overflow-auto p-8 relative">
           <AnimatePresence mode="wait">
@@ -832,7 +812,11 @@ export default function App() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="absolute top-0 right-0 bottom-0 z-30 shadow-2xl"
             >
-              <ChatAssistant dataSummary={data.summary} />
+              <ChatAssistant
+                dataSummary={data.summary}
+                rawStats={data.stats}
+                onClose={() => setIsChatOpen(false)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
