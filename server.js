@@ -82,7 +82,6 @@ REGLAS DE RESPUESTA:
 
         const fullText = response.text;
 
-        // Extraer chartConfig si existe
         const chartMatch = fullText.match(/<chart>([\s\S]*?)<\/chart>/);
         let chartConfig = null;
         let text = fullText.replace(/<chart>[\s\S]*?<\/chart>/g, '').trim();
@@ -145,15 +144,40 @@ Genera entre 3 y 5 findings. Sé específico con los números del dataset.`;
     }
 });
 
-// ─── Endpoint 4: Slides de Presentación Mejoradas ──────────────────────────
+// ─── Endpoint 4: Slides Configurables ──────────────────────────────────────
 app.post('/api/slides', async (req, res) => {
     try {
-        const { stats, summary } = req.body;
+        const { stats, summary, config } = req.body;
         const ai = getAI();
 
-        const systemPrompt = `Eres un Consultor Estratégico Senior (Ex-McKinsey, Bain) especialista en Contact Centers y Customer Experience.
+        // Config defaults
+        const slideCount = config?.slideCount ?? 5;
+        const theme = config?.theme ?? 'teal';
+        const includedTypes = config?.includedTypes ?? ['overview', 'efficiency', 'channels', 'tipification', 'action'];
+
+        // Build dynamic narrative from selected types
+        const narrativeMap = {
+            overview:       'Situación Actual — Resumen ejecutivo del período',
+            efficiency:     'Eficiencia Operativa — SLA, AHT, Índice de Eficiencia',
+            channels:       'Mix de Canales — Análisis de distribución y preferencias',
+            tipification:   'Cuellos de Botella — Tipificaciones críticas y volumen',
+            action:         'Plan de Acción — Recomendaciones con impacto esperado',
+            strategy:       'Estrategia — Visión a mediano plazo y KPIs objetivo',
+            colas:          'Distribución por Colas — Análisis de flujos de atención',
+            hourly:         'Análisis Horario — Picos de demanda y capacidad',
+        };
+
+        const selectedTypes = includedTypes.slice(0, slideCount);
+        const narrativeList = selectedTypes
+            .map((t, i) => `${i + 1}. SLIDE ${i + 1} (type: ${t}): ${narrativeMap[t] || t}`)
+            .join('\n');
+
+        const themeInstruction = `El color principal del tema visual es "${theme}". Refleja esto en los títulos y el tono.`;
+
+        const systemPrompt = `Eres un Consultor Estratégico Senior (Ex-McKinsey, Bain) especialista en Contact Centers.
 Tu misión es generar una presentación ejecutiva de ALTO IMPACTO basada en datos reales.
 Responde ÚNICAMENTE con un JSON válido, sin markdown adicional.
+${themeInstruction}
 
 ESTRUCTURA DE CADA SLIDE:
 {
@@ -161,24 +185,20 @@ ESTRUCTURA DE CADA SLIDE:
     {
       "title": "Título poderoso y directivo (máx 6 palabras)",
       "subtitle": "Hallazgo principal como pregunta o afirmación impactante",
-      "content": "Análisis profundo de 2-3 oraciones con datos específicos del dataset. Menciona cifras reales.",
-      "insight": "Recomendación táctica concreta y accionable para el equipo directivo",
+      "content": "Análisis profundo de 2-3 oraciones con datos específicos del dataset.",
+      "insight": "Recomendación táctica concreta y accionable",
       "metric": "VALOR UNIDAD (ej: '87.3% SLA', '4.2min AHT', '1,234 Sesiones')",
-      "type": "overview" | "efficiency" | "channels" | "tipification" | "strategy" | "action",
+      "type": "overview" | "efficiency" | "channels" | "tipification" | "strategy" | "action" | "colas" | "hourly",
       "bulletPoints": ["Dato clave 1 con número", "Dato clave 2 con número", "Dato clave 3 con número"],
-      "color": "teal" | "blue" | "emerald" | "amber" | "rose"
+      "color": "${theme}"
     }
   ]
 }
 
-NARRATIVA OBLIGATORIA (5 slides):
-1. SLIDE 1 (type: overview): Situación Actual — Resumen ejecutivo del período
-2. SLIDE 2 (type: efficiency): Eficiencia Operativa — SLA, AHT, Índice de Eficiencia
-3. SLIDE 3 (type: channels): Mix de Canales — Análisis de distribución y preferencias
-4. SLIDE 4 (type: tipification): Cuellos de Botella — Tipificaciones críticas y volumen
-5. SLIDE 5 (type: action): Plan de Acción — 3 recomendaciones concretas con impacto esperado
+NARRATIVA REQUERIDA (${slideCount} slides exactamente):
+${narrativeList}
 
-IMPORTANTE: Usa EXCLUSIVAMENTE los datos reales proporcionados. Sé específico, directivo y orientado a resultados.`;
+IMPORTANTE: Usa EXCLUSIVAMENTE los datos reales proporcionados. Genera EXACTAMENTE ${slideCount} slides.`;
 
         const userMessage = `DATOS REALES DEL PERÍODO:
 - Período: ${stats.dateRange}
@@ -190,7 +210,6 @@ IMPORTANTE: Usa EXCLUSIVAMENTE los datos reales proporcionados. Sé específico,
 - Hora Pico: ${stats.peakHour?.hour}:00 (${stats.peakHour?.count} sesiones)
 - Transfer Rate: ${((stats.totalTransfers / stats.totalSessions) * 100).toFixed(1)}%
 - Total Respuestas: ${stats.totalResponses}
-- Sesiones Transferidas: ${stats.totalTransfers}
 
 CANALES (Top 5):
 ${stats.sessionsByChannel?.slice(0, 5).map(c => `  - ${c.channel}: ${c.count} sesiones (${((c.count/stats.totalSessions)*100).toFixed(1)}%)`).join('\n')}

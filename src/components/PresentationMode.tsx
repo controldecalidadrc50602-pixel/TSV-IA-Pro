@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Presentation, ChevronRight, ChevronLeft, Sparkles,
   Download, Play, LayoutDashboard, TrendingUp, Share2,
-  Radio, Target, Zap, AlertTriangle, CheckCircle2, BarChart3
+  Radio, Target, Zap, AlertTriangle, CheckCircle2, BarChart3,
+  Settings2, Palette, FileText
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
@@ -13,12 +14,18 @@ import { DataStats } from '@/lib/data-processor';
 import { cn } from '@/lib/utils';
 import pptxgen from 'pptxgenjs';
 
+interface PresentationConfig {
+    theme: string;
+    slideCount: number;
+    includedTypes: string[];
+}
+
 interface PresentationModeProps {
   stats: DataStats;
   insights?: string;
   onBack: () => void;
   logo?: string | null;
-  onGenerateSlides: () => Promise<Slide[]>;
+  onGenerateSlides: (config: PresentationConfig) => Promise<Slide[]>;
 }
 
 interface Slide {
@@ -30,7 +37,6 @@ interface Slide {
   type?: string;
   bulletPoints?: string[];
   color?: string;
-  icon?: any;
 }
 
 const COLORS = ['#2DD4BF', '#6366F1', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#0EA5E9'];
@@ -42,6 +48,8 @@ const slideThemes: Record<string, { accent: string; bg: string; border: string; 
   tipification: { accent: 'text-amber-400', bg: 'from-amber-500/10', border: 'border-amber-500/30', icon: AlertTriangle },
   action: { accent: 'text-emerald-400', bg: 'from-emerald-500/10', border: 'border-emerald-500/30', icon: Target },
   strategy: { accent: 'text-rose-400', bg: 'from-rose-500/10', border: 'border-rose-500/30', icon: Zap },
+  colas: { accent: 'text-indigo-400', bg: 'from-indigo-500/10', border: 'border-indigo-500/30', icon: Radio },
+  hourly: { accent: 'text-sky-400', bg: 'from-sky-500/10', border: 'border-sky-500/30', icon: TrendingUp },
 };
 
 const tooltipStyle = {
@@ -50,6 +58,7 @@ const tooltipStyle = {
   backgroundColor: '#0F172A', color: '#F1F5F9', fontSize: '11px', fontWeight: 700
 };
 
+// ... SlideChart component remains the same ...
 function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
   if (type === 'channels' && stats.sessionsByChannel?.length > 0) {
     const data = stats.sessionsByChannel.slice(0, 6);
@@ -69,7 +78,7 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     );
   }
 
-  if (type === 'tipification' && stats.statsByTipificacion?.length > 0) {
+  if ((type === 'tipification' || type === 'action') && stats.statsByTipificacion?.length > 0) {
     const data = stats.statsByTipificacion.slice(0, 6);
     return (
       <div className="h-[220px] w-full">
@@ -85,8 +94,25 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
       </div>
     );
   }
+  
+  if (type === 'colas' && stats.statsByCola?.length > 0) {
+      const data = stats.statsByCola.slice(0, 6);
+      return (
+        <div className="h-[220px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical">
+              <XAxis type="number" hide />
+              <YAxis dataKey="cola" type="category" width={110} fontSize={9} fontWeight={700}
+                tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+              <Bar dataKey="count" fill="#6366F1" radius={[0, 6, 6, 0]} barSize={18} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      );
+  }
 
-  if (type === 'efficiency' || type === 'overview') {
+  if (type === 'efficiency' || type === 'overview' || type === 'hourly' || type === 'strategy') {
     const data = stats.sessionsByHour?.filter(h => h.count > 0) ?? [];
     return (
       <div className="h-[220px] w-full">
@@ -110,45 +136,68 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     );
   }
 
-  if (type === 'action') {
-    const kpiData = [
-      { name: 'SLA', value: stats.slaCompliance ?? 0, target: 80 },
-      { name: 'Bot Res.', value: stats.botSuccessRate ?? 0, target: 70 },
-      { name: 'Eficiencia', value: stats.efficiencyIndex ?? 0, target: 75 },
-    ];
-    return (
-      <div className="h-[220px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={kpiData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
-            <XAxis dataKey="name" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-            <YAxis domain={[0, 100]} fontSize={9} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} unit="%" />
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} formatter={(v: any) => [`${v.toFixed(1)}%`]} />
-            <Bar dataKey="value" name="Real" fill="#2DD4BF" radius={[6, 6, 0, 0]} barSize={40} />
-            <Bar dataKey="target" name="Meta" fill="#1E3A4A" radius={[6, 6, 0, 0]} barSize={40} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  }
-
   return null;
 }
+
+const THEMES = [
+    { id: 'teal', label: 'Teal (Modern)', color: 'bg-teal-500' },
+    { id: 'blue', label: 'Blue (Corporate)', color: 'bg-blue-500' },
+    { id: 'purple', label: 'Purple (Creative)', color: 'bg-purple-500' },
+    { id: 'amber', label: 'Amber (Warm)', color: 'bg-amber-500' },
+    { id: 'rose', label: 'Rose (Bold)', color: 'bg-rose-500' },
+];
+
+const SLIDE_TYPES = [
+    { id: 'overview', label: 'Resumen General' },
+    { id: 'efficiency', label: 'Eficiencia Operativa' },
+    { id: 'channels', label: 'Mix de Canales' },
+    { id: 'tipification', label: 'Tipificaciones' },
+    { id: 'colas', label: 'Análisis de Colas' },
+    { id: 'hourly', label: 'Comportamiento Horario' },
+    { id: 'action', label: 'Plan de Acción' },
+    { id: 'strategy', label: 'Estrategia Mediano Plazo' },
+];
 
 export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlides }: PresentationModeProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [aiSlides, setAiSlides] = useState<Slide[]>([]);
+  
+  // Config state
+  const [config, setConfig] = useState<PresentationConfig>({
+      theme: 'teal',
+      slideCount: 5,
+      includedTypes: ['overview', 'efficiency', 'channels', 'tipification', 'action']
+  });
+
+  const handleToggleType = (typeId: string) => {
+      setConfig(prev => {
+          const isIncluded = prev.includedTypes.includes(typeId);
+          let newTypes = [];
+          if (isIncluded) {
+              // Prevent removing if it's the last one
+              if (prev.includedTypes.length <= 1) return prev;
+              newTypes = prev.includedTypes.filter(t => t !== typeId);
+          } else {
+              newTypes = [...prev.includedTypes, typeId];
+          }
+          // Adjust slide count if we selected fewer types than the current slide count
+          // Or if we select more types, we might want to bump the slide count.
+          // For simplicity, let's just update the types.
+          return { ...prev, includedTypes: newTypes };
+      });
+  };
 
   const handleStart = async () => {
     setIsGenerating(true);
     try {
-      const generated = await onGenerateSlides();
+      const generated = await onGenerateSlides(config);
       setAiSlides(generated);
       setHasStarted(true);
     } catch (err) {
       console.error('Error generating slides', err);
+      // Fallback slide
       setAiSlides([{
         title: 'Análisis Ejecutivo',
         subtitle: stats.dateRange,
@@ -171,7 +220,7 @@ export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlid
       s.background = { color: '0F172A' };
       if (logo) s.addImage({ data: logo, x: 0.5, y: 0.2, w: 1.2, h: 0.5 });
       s.addText(`${idx + 1} / ${slides.length}`, { x: 8.5, y: 0.2, w: 1.5, fontSize: 10, color: '475569', bold: true, align: 'right' });
-      s.addText(slide.title, { x: 0.5, y: 0.9, w: '90%', fontSize: 34, bold: true, color: '2DD4BF' });
+      s.addText(slide.title, { x: 0.5, y: 0.9, w: '90%', fontSize: 34, bold: true, color: '2DD4BF' }); // Might need to adapt color to theme
       s.addText(`"${slide.subtitle}"`, { x: 0.5, y: 1.7, w: '90%', fontSize: 16, italic: true, color: '94A3B8' });
       s.addText(slide.content, { x: 0.5, y: 2.5, w: '58%', fontSize: 14, color: 'CBD5E1', lineSpacing: 22 });
       if (slide.bulletPoints?.length) {
@@ -195,51 +244,135 @@ export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlid
 
   const slides = aiSlides.length > 0 ? aiSlides : [];
 
-  // Landing Screen
+  // Landing Screen with Config Panel
   if (!hasStarted) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-dark-card rounded-[3rem] border border-slate-100 dark:border-dark-border shadow-2xl">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-xl">
-          <div className="w-24 h-24 bg-gradient-to-br from-brand-turquoise/20 to-teal-500/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-brand-turquoise/20">
-            <Presentation size={48} className="text-brand-turquoise" />
-          </div>
-          <h2 className="text-4xl font-black text-slate-800 dark:text-white mb-4 tracking-tight">
-            AI <span className="text-brand-turquoise">Presentation Engine</span>
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-4 leading-relaxed text-sm">
-            Transforma tus datos operativos en una narrativa ejecutiva de alto impacto con <strong>gráficos en vivo</strong> generados por Gemini AI.
-          </p>
+      <div className="h-full flex flex-col p-8 bg-slate-50 dark:bg-dark-bg rounded-[3rem]">
+        <div className="flex-1 max-w-5xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Left: Hero Info */}
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                <div className="w-20 h-20 bg-gradient-to-br from-brand-turquoise/20 to-teal-500/10 rounded-[2rem] flex items-center justify-center mb-6 border border-brand-turquoise/20">
+                    <Presentation size={36} className="text-brand-turquoise" />
+                </div>
+                <h2 className="text-4xl font-black text-slate-800 dark:text-white mb-4 tracking-tight">
+                    AI <span className="text-brand-turquoise">Presentation Engine</span>
+                </h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed text-sm">
+                    Personaliza y genera una narrativa ejecutiva de alto impacto. Gemini AI analizará tus datos y construirá slides interactivos listos para presentar o exportar a PPTX.
+                </p>
 
-          {/* Preview features */}
-          <div className="grid grid-cols-3 gap-3 mb-10">
-            {[
-              { icon: BarChart3, label: 'Gráficos en vivo' },
-              { icon: Sparkles, label: 'Análisis Gemini' },
-              { icon: Download, label: 'Export PPTX/PDF' },
-            ].map((f, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
-                <f.icon size={20} className="text-brand-turquoise" />
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{f.label}</span>
-              </div>
-            ))}
-          </div>
+                <div className="flex flex-col gap-4">
+                    <button
+                        onClick={handleStart}
+                        disabled={isGenerating}
+                        className="group flex items-center justify-center gap-3 px-8 py-4 bg-brand-turquoise text-white rounded-2xl font-bold text-lg shadow-xl shadow-brand-turquoise/20 hover:scale-[1.02] transition-all disabled:opacity-50"
+                    >
+                        {isGenerating ? (
+                        <><Sparkles className="animate-pulse" size={20} /> Generando Narrativa...</>
+                        ) : (
+                        <><Play size={20} /> Generar Presentación <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" /></>
+                        )}
+                    </button>
+                    <button onClick={onBack} className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                        Cancelar y volver
+                    </button>
+                </div>
+            </motion.div>
 
-          <button
-            onClick={handleStart}
-            disabled={isGenerating}
-            className="group px-10 py-4 bg-brand-turquoise text-white rounded-2xl font-bold text-lg shadow-xl shadow-brand-turquoise/20 hover:scale-105 transition-all disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <span className="flex items-center gap-3">
-                <Sparkles className="animate-pulse" size={20} /> Generando Narrativa...
-              </span>
-            ) : (
-              <span className="flex items-center gap-3">
-                <Play size={20} /> Generar Presentación <ChevronRight size={20} />
-              </span>
-            )}
-          </button>
-        </motion.div>
+            {/* Right: Config Panel */}
+            <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
+                <div className="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border p-8 shadow-xl shadow-slate-200/50 dark:shadow-none">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Settings2 size={18} className="text-slate-400" />
+                        <h3 className="font-black text-slate-700 dark:text-white">Configuración del Reporte</h3>
+                    </div>
+
+                    <div className="space-y-8">
+                        {/* Tema */}
+                        <div>
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                <Palette size={14} /> Tema de Color Principal
+                            </label>
+                            <div className="flex flex-wrap gap-3">
+                                {THEMES.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setConfig({...config, theme: t.id})}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-bold transition-all",
+                                            config.theme === t.id 
+                                                ? "border-slate-800 bg-slate-800 text-white dark:border-white dark:bg-white dark:text-slate-900 shadow-md"
+                                                : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500"
+                                        )}
+                                    >
+                                        <div className={cn("w-3 h-3 rounded-full", t.color)} />
+                                        {t.label.split(' ')[0]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Slide Count */}
+                        <div>
+                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                <FileText size={14} /> Número de Slides
+                            </label>
+                            <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1 inline-flex">
+                                {[3, 4, 5, 6].map(num => (
+                                    <button
+                                        key={num}
+                                        onClick={() => setConfig({...config, slideCount: num})}
+                                        className={cn(
+                                            "px-6 py-2 rounded-lg text-sm font-bold transition-all",
+                                            config.slideCount === num
+                                                ? "bg-white dark:bg-slate-700 text-brand-dark dark:text-white shadow-sm"
+                                                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                                        )}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Tipos a incluir */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                    <LayoutDashboard size={14} /> Contenido a Analizar
+                                </label>
+                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                                    Seleccionados: {config.includedTypes.length}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {SLIDE_TYPES.map(type => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => handleToggleType(type.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 p-3 rounded-xl border text-left transition-all",
+                                            config.includedTypes.includes(type.id)
+                                                ? "border-brand-turquoise bg-brand-turquoise/5 text-brand-dark dark:text-white"
+                                                : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-brand-turquoise/30"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-4 h-4 rounded flex items-center justify-center border",
+                                            config.includedTypes.includes(type.id) ? "bg-brand-turquoise border-brand-turquoise text-white" : "border-slate-300 dark:border-slate-600"
+                                        )}>
+                                            {config.includedTypes.includes(type.id) && <CheckCircle2 size={12} />}
+                                        </div>
+                                        <span className="text-xs font-bold truncate">{type.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
       </div>
     );
   }
@@ -421,7 +554,7 @@ export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlid
           </button>
         </div>
       </div>
-
+      
       {/* Print container */}
       <div className="hidden slide-print-container">
         {slides.map((slide, i) => (

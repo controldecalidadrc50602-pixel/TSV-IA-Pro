@@ -8,8 +8,9 @@ import { PresentationMode } from '@/components/PresentationMode';
 import { AnalyticsPanel } from '@/components/AnalyticsPanel';
 import { ChatAssistant } from '@/components/ChatAssistant';
 import { InsightsBar, Finding } from '@/components/InsightsBar';
+import { PublicDashboard } from '@/components/PublicDashboard';
 import { processData, generateDataSummary, DataStats } from '@/lib/data-processor';
-import { saveFile, getFiles, deleteFile } from '@/lib/storage';
+import { saveFile, getFiles, deleteFile, savePublicShare } from '@/lib/storage';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
@@ -51,6 +52,23 @@ export default function App() {
   const [insightsSummary, setInsightsSummary] = useState<string>('');
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(localStorage.getItem('tsv_logo'));
+  const [publicShareId, setPublicShareId] = useState<string | null>(null);
+
+  // Hash Routing para Public Dashboard
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#/share/')) {
+        setPublicShareId(hash.replace('#/share/', ''));
+    }
+    
+    const handleHashChange = () => {
+        const h = window.location.hash;
+        if (h.startsWith('#/share/')) setPublicShareId(h.replace('#/share/', ''));
+        else setPublicShareId(null);
+    }
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     if (logo) localStorage.setItem('tsv_logo', logo);
@@ -399,8 +417,12 @@ export default function App() {
     );
   }
 
-  if (!session && isCloudEnabled) {
+  if (!session && isCloudEnabled && !publicShareId) {
     return <Auth />;
+  }
+
+  if (publicShareId) {
+      return <PublicDashboard shareId={publicShareId} />;
   }
 
   return (
@@ -626,7 +648,23 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <Dashboard stats={data.stats} insights={data.insights} />
+                <Dashboard 
+                    stats={data.stats} 
+                    insights={data.insights} 
+                    onShare={async () => {
+                        setIsLoading(true);
+                        try {
+                            const name = reportName || data.fileName.split('.')[0] || 'Reporte';
+                            const id = await savePublicShare(name, data.stats, data.summary);
+                            window.open(`${window.location.origin}${window.location.pathname}#/share/${id}`, '_blank');
+                        } catch (e) {
+                            console.error("Error sharing", e);
+                            alert("No se pudo generar el enlace público.");
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }}
+                />
               </motion.div>
             )}
 

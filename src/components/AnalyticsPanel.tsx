@@ -225,7 +225,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
             </div>
           </div>
 
-          <div className="h-[260px]">
+          <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topNData} layout="vertical" margin={{ left: 8, right: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.15)" />
@@ -313,7 +313,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                 </div>
               </div>
 
-              <div className="h-[200px]">
+              <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.sessionsByHour} margin={{ top: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
@@ -442,7 +442,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
 
       {/* Row 5: Trend Line — Sesiones por Hora */}
       <Section title="Curva de Demanda Horaria" icon={TrendingUp}>
-        <div className="h-[200px]">
+        <div className="h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={stats.sessionsByHour} margin={{ top: 4, right: 16 }}>
               <defs>
