@@ -33,14 +33,14 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
   icon: React.ElementType; color: string;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-5 flex items-start gap-4 hover:shadow-lg transition-shadow">
-      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', color)}>
-        <Icon size={18} />
+    <div className="bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 flex items-start gap-4 hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 shadow-sm group">
+      <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:rotate-6', color)}>
+        <Icon size={22} />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-2xl font-black text-slate-800 dark:text-white leading-none">{value}</p>
-        {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1.5">{label}</p>
+        <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none tracking-tight">{value}</p>
+        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">{sub}</p>}
       </div>
     </div>
   );
@@ -51,10 +51,12 @@ function Section({ title, icon: Icon, children, className }: {
   title: string; icon: React.ElementType; children: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={cn('bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-6', className)}>
-      <div className="flex items-center gap-2 mb-5">
-        <Icon size={16} className="text-brand-turquoise" />
-        <h3 className="text-sm font-black text-slate-700 dark:text-white uppercase tracking-widest">{title}</h3>
+    <div className={cn('bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm hover:shadow-xl transition-all duration-500', className)}>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-8 h-8 rounded-xl bg-brand-turquoise/10 flex items-center justify-center">
+            <Icon size={18} className="text-brand-turquoise" />
+        </div>
+        <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">{title}</h3>
       </div>
       {children}
     </div>

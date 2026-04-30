@@ -3,7 +3,7 @@ import { supabase, isCloudEnabled } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, Plus, Settings2, Trash2, Check, 
-  ChevronRight, LayoutGrid, Briefcase, Globe 
+  ChevronRight, LayoutGrid, Briefcase, Globe, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,12 +40,10 @@ export function ProjectManager({ onProjectSelect, activeProjectId }: ProjectMana
       
       if (!error && data) {
         setProjects(data);
-        // If there's only one project and none selected, auto-select it
         if (data.length > 0 && !activeProjectId) {
           onProjectSelect(data[0]);
         }
       } else if (error && error.code === 'PGRST116') {
-        // Table might not exist yet, fallback to local
         loadLocalProjects();
       }
     } else {
@@ -88,7 +86,6 @@ export function ProjectManager({ onProjectSelect, activeProjectId }: ProjectMana
           setProjects([data, ...projects]);
           onProjectSelect(data);
         } else {
-          // Fallback if table doesn't exist
           saveLocalProject(newProject);
         }
       } catch (err) {
@@ -113,97 +110,116 @@ export function ProjectManager({ onProjectSelect, activeProjectId }: ProjectMana
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between px-2">
-        <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Compañías / Proyectos</h3>
+        <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Workspace Selector</h3>
         <button 
           onClick={() => setIsCreating(true)}
-          className="p-1 hover:bg-brand-turquoise/10 text-brand-turquoise rounded-md transition-colors"
+          className="p-1.5 hover:bg-brand-turquoise/10 text-brand-turquoise rounded-lg transition-colors border border-transparent hover:border-brand-turquoise/20"
         >
           <Plus size={14} />
         </button>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         {projects.map((project) => (
           <button
             key={project.id}
             onClick={() => onProjectSelect(project)}
             className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium group relative",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all group relative border",
               activeProjectId === project.id 
-                ? "bg-brand-turquoise/10 text-brand-turquoise" 
-                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-brand-dark dark:hover:text-white"
+                ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm" 
+                : "bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/30"
             )}
           >
-            <Building2 size={18} className={cn(activeProjectId === project.id ? "text-brand-turquoise" : "text-slate-400")} />
-            <span className="truncate flex-1 text-left">{project.name}</span>
+            <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105"
+                style={{ backgroundColor: activeProjectId === project.id ? project.brand_color : 'rgba(148,163,184,0.1)' }}
+            >
+              <Building2 size={18} className={activeProjectId === project.id ? "text-white" : "text-slate-400"} />
+            </div>
+            
+            <div className="flex flex-col min-w-0 flex-1">
+                <span className={cn(
+                    "text-sm font-bold truncate text-left",
+                    activeProjectId === project.id ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"
+                )}>
+                    {project.name}
+                </span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter text-left">
+                    Enterprise Workspace
+                </span>
+            </div>
+
             {activeProjectId === project.id && (
-              <Check size={14} className="text-brand-turquoise" />
+              <div className="w-2 h-2 rounded-full bg-brand-turquoise shadow-[0_0_8px_rgba(45,212,191,0.6)]" />
             )}
           </button>
         ))}
 
         {projects.length === 0 && !isCreating && (
-          <div className="px-4 py-8 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
-            <Briefcase size={24} className="mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">Sin proyectos activos</p>
-          </div>
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="w-full px-4 py-8 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl hover:border-brand-turquoise/30 hover:bg-brand-turquoise/5 transition-all group"
+          >
+            <Plus size={24} className="mx-auto text-slate-300 dark:text-slate-700 mb-2 group-hover:text-brand-turquoise" />
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider">Crear primer proyecto</p>
+          </button>
         )}
       </div>
 
       <AnimatePresence>
         {isCreating && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="px-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="px-1"
           >
-            <form onSubmit={handleCreateProject} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <form onSubmit={handleCreateProject} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles size={16} className="text-brand-turquoise" />
+                <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Nueva Empresa</span>
+              </div>
+              
               <input 
                 autoFocus
                 type="text"
                 placeholder="Nombre de la empresa..."
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-turquoise dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-turquoise/20 dark:text-white"
               />
               
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Color de Marca:</span>
-                <div className="flex gap-1.5">
-                  {['#2DD4BF', '#6366F1', '#EC4899', '#F59E0B', '#10B981'].map(c => (
+              <div className="space-y-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estilo de Marca</span>
+                <div className="flex flex-wrap gap-2">
+                  {['#2DD4BF', '#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6'].map(c => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setNewProjectColor(c)}
                       className={cn(
-                        "w-5 h-5 rounded-full border-2 transition-all",
-                        newProjectColor === c ? "border-white scale-110 shadow-lg" : "border-transparent opacity-50 hover:opacity-100"
+                        "w-6 h-6 rounded-lg border-2 transition-all",
+                        newProjectColor === c ? "border-slate-800 dark:border-white scale-110 shadow-lg" : "border-transparent opacity-60"
                       )}
                       style={{ backgroundColor: c }}
                     />
                   ))}
-                  <input 
-                    type="color" 
-                    value={newProjectColor}
-                    onChange={(e) => setNewProjectColor(e.target.value)}
-                    className="w-5 h-5 rounded-full overflow-hidden border-none p-0 bg-transparent cursor-pointer"
-                  />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <button 
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-brand-turquoise text-white py-2 rounded-lg text-xs font-bold hover:brightness-105 transition-all"
+                  className="flex-1 bg-brand-turquoise text-white py-2.5 rounded-xl text-xs font-black hover:brightness-105 transition-all shadow-lg shadow-brand-turquoise/20"
                 >
-                  Crear
+                  Crear Workspace
                 </button>
                 <button 
                   type="button"
                   onClick={() => setIsCreating(false)}
-                  className="px-3 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold"
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-bold"
                 >
                   Cancelar
                 </button>

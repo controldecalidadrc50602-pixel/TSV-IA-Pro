@@ -408,15 +408,15 @@ export default function App() {
     <button
       onClick={() => setActiveTab(tab)}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium group relative",
+        "w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all text-sm font-semibold group relative",
         active 
-          ? "bg-brand-turquoise/10 text-brand-turquoise" 
+          ? "bg-brand-turquoise text-white shadow-lg shadow-brand-turquoise/30" 
           : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-brand-dark dark:hover:text-white"
       )}
     >
-      <Icon size={18} className={cn("icon-shadow", active ? "text-brand-turquoise" : "text-slate-400 group-hover:text-brand-dark dark:group-hover:text-white")} />
+      <Icon size={18} className={cn("icon-shadow", active ? "text-white" : "text-slate-400 group-hover:text-brand-dark dark:group-hover:text-white")} />
       {isSidebarOpen && <span>{label}</span>}
-      {active && <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-6 bg-brand-turquoise rounded-r-full" />}
+      {active && <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-6 bg-white/20 rounded-r-full" />}
     </button>
   );
 
@@ -484,31 +484,36 @@ export default function App() {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "bg-white dark:bg-dark-card border-r border-slate-200 dark:border-dark-border flex flex-col transition-all duration-300 z-20 shadow-xl shadow-slate-200/50 dark:shadow-none",
+          "bg-white dark:bg-dark-card border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-500 z-20 shadow-2xl shadow-slate-200/20 dark:shadow-none",
           isSidebarOpen ? "w-72" : "w-20"
         )}
       >
         <div className="p-6 flex items-center justify-between h-20">
-          {isSidebarOpen && (
-            <div className="flex flex-col">
-              <span className="font-bold text-lg text-brand-dark dark:text-white tracking-tight leading-none">TSV Intelligence</span>
-              <span className="text-xs text-brand-turquoise font-bold tracking-widest uppercase">PRO EDITION</span>
+          {isSidebarOpen ? (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-brand-turquoise rounded-xl flex items-center justify-center shadow-lg shadow-brand-turquoise/30">
+                <ShieldCheck className="text-white" size={24} />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-extrabold text-lg text-brand-dark dark:text-white tracking-tight leading-none">TSV Intelligence</span>
+                <span className="text-[10px] text-brand-turquoise font-black tracking-widest uppercase mt-1">PRO EDITION</span>
+              </div>
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-brand-turquoise rounded-xl flex items-center justify-center mx-auto">
+              <ShieldCheck className="text-white" size={20} />
             </div>
           )}
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-brand-dark dark:hover:text-white transition-colors">
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
 
-        {/* Cloud Status Indicator */}
         {isSidebarOpen && isCloudEnabled && (
-          <div className="px-6 mb-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full w-fit">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-              <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Cloud Synchronized</span>
+          <div className="px-6 mb-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-turquoise/5 border border-brand-turquoise/10 rounded-full w-fit">
+              <div className="w-1.5 h-1.5 rounded-full bg-brand-turquoise animate-pulse" />
+              <span className="text-[8px] font-black text-brand-turquoise uppercase tracking-widest">Enterprise Cloud Active</span>
             </div>
           </div>
-        )}
+        )/* ... resto de Sidebar ... */}
 
         <nav className="flex-1 px-4 space-y-6 mt-4 overflow-y-auto no-scrollbar">
           <div className="px-2 mb-4">
