@@ -50,6 +50,14 @@ export function PublicDashboard({ shareId }: PublicDashboardProps) {
     loadShare();
   }, [shareId]);
 
+  // Apply Brand Color from Share
+  useEffect(() => {
+    if (data?.brandColor) {
+      const root = window.document.documentElement;
+      root.style.setProperty('--color-brand-turquoise', data.brandColor);
+    }
+  }, [data]);
+
   const handleCopyLink = () => {
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);

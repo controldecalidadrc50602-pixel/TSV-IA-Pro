@@ -24,6 +24,7 @@ import { supabase, isCloudEnabled } from '@/lib/supabase';
 import { Auth } from '@/components/Auth';
 import { ProjectManager, Project } from '@/components/ProjectManager';
 import { ExecutiveBriefing } from '@/components/ExecutiveBriefing';
+import { DataSelector } from '@/components/DataSelector';
 import { Session } from '@supabase/supabase-js';
 
 interface ParsedData {
@@ -57,6 +58,14 @@ export default function App() {
   const [publicShareId, setPublicShareId] = useState<string | null>(null);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
+  const [pendingData, setPendingData] = useState<{headers: string[], rows: any[][], fileName: string} | null>(null);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setData(null);
+    setActiveProject(null);
+  };
 
   // Hash Routing para Public Dashboard
   useEffect(() => {
@@ -238,7 +247,8 @@ export default function App() {
             }
             const headers = rawData[0];
             const rawRows = rawData.slice(1);
-            await processFileContent(headers, rawRows, file.name);
+            setPendingData({ headers, rows: rawRows, fileName: file.name });
+            setIsLoading(false);
           },
           error: (err) => {
             setError(`Error parsing file: ${err.message}`);
@@ -263,7 +273,8 @@ export default function App() {
 
                 const headers = jsonData[0] as string[];
                 const rawRows = jsonData.slice(1) as any[][];
-                await processFileContent(headers, rawRows, file.name);
+                setPendingData({ headers, rows: rawRows, fileName: file.name });
+                setIsLoading(false);
             } catch (err) {
                 setError(`Error parsing Excel file: ${err}`);
                 setIsLoading(false);
@@ -527,6 +538,13 @@ export default function App() {
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
                 {session?.user?.email?.substring(0, 2).toUpperCase() || 'AD'}
               </div>
+              <button 
+                onClick={handleSignOut}
+                className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
+                title="Cerrar Sesión"
+              >
+                <LogOut size={20} />
+              </button>
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
                   {session?.user?.email || 'Admin User'}
@@ -650,6 +668,25 @@ export default function App() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-auto p-8 relative">
+          {/* Data Selection Hub Overlay */}
+          <AnimatePresence>
+              {pendingData && (
+                  <DataSelector 
+                      headers={pendingData.headers}
+                      rows={pendingData.rows}
+                      onConfirm={async (selectedHeaders, filteredRows) => {
+                          const fileName = pendingData.fileName;
+                          setPendingData(null);
+                          setIsLoading(true);
+                          await processFileContent(selectedHeaders, filteredRows, fileName);
+                      }}
+                      onCancel={() => {
+                          setPendingData(null);
+                      }}
+                  />
+              )}
+          </AnimatePresence>
+
           <AnimatePresence mode="wait">
             {activeTab === 'upload' && (
               <motion.div 
@@ -716,7 +753,7 @@ export default function App() {
                         setIsLoading(true);
                         try {
                             const name = reportName || data.fileName.split('.')[0] || 'Reporte';
-                            const id = await savePublicShare(name, data.stats, data.summary);
+                            const id = await savePublicShare(name, data.stats, data.summary, activeProject?.brand_color);
                             window.open(`${window.location.origin}${window.location.pathname}#/share/${id}`, '_blank');
                         } catch (e) {
                             console.error("Error sharing", e);

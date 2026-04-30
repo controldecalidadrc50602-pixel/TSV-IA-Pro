@@ -102,22 +102,20 @@ export async function deleteFile(id: string) {
 
 // ─── Public Sharing ──────────────────────────────────────────────────────────
 
-export async function savePublicShare(reportName: string, stats: DataStats, summary: string): Promise<string> {
+export async function savePublicShare(reportName: string, stats: DataStats, summary: string, brandColor?: string): Promise<string> {
   const id = crypto.randomUUID();
-  const shareData = {
-    id,
-    reportName,
     stats,
     summary,
+    brandColor,
     createdAt: new Date(),
   };
 
   if (isCloudEnabled) {
-    // Si usas Supabase, requerirías una tabla 'public_shares' sin RLS de lectura
-    // const { error } = await supabase.from('public_shares').insert([shareData]);
-    // if (error) throw error;
-    // Por ahora, fallback a localStorage si no está la tabla creada:
-    localStorage.setItem(`tsv_share_${id}`, JSON.stringify(shareData));
+    const { error } = await supabase.from('public_shares').insert([shareData]);
+    if (error) {
+      console.warn("Error saving to public_shares table, falling back to localStorage", error);
+      localStorage.setItem(`tsv_share_${id}`, JSON.stringify(shareData));
+    }
   } else {
     // Guardar en IndexedDB local
     const db = await initLocalDB();
@@ -129,8 +127,8 @@ export async function savePublicShare(reportName: string, stats: DataStats, summ
 
 export async function getPublicShare(id: string): Promise<any> {
   if (isCloudEnabled) {
-    // const { data, error } = await supabase.from('public_shares').select('*').eq('id', id).single();
-    // if (!error && data) return data;
+    const { data, error } = await supabase.from('public_shares').select('*').eq('id', id).single();
+    if (!error && data) return data;
     const local = localStorage.getItem(`tsv_share_${id}`);
     if (local) return JSON.parse(local);
     return null;

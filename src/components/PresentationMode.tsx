@@ -60,8 +60,11 @@ const tooltipStyle = {
 
 // ... SlideChart component remains the same ...
 function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
+  const schema = stats.detectedSchema;
+  
   if (type === 'channels' && stats.sessionsByChannel?.length > 0) {
     const data = stats.sessionsByChannel.slice(0, 6);
+    const label = schema?.categorical[0] || 'Categoría Principal';
     return (
       <div className="h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -80,8 +83,10 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
 
   if ((type === 'tipification' || type === 'action') && stats.statsByTipificacion?.length > 0) {
     const data = stats.statsByTipificacion.slice(0, 6);
+    const label = schema?.categorical[1] || 'Sub-categoría';
     return (
       <div className="h-[220px] w-full">
+        <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-widest">{label}</div>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical">
             <XAxis type="number" hide />
@@ -97,8 +102,10 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
   
   if (type === 'colas' && stats.statsByCola?.length > 0) {
       const data = stats.statsByCola.slice(0, 6);
+      const label = schema?.categorical[2] || 'Tercera Categoría';
       return (
         <div className="h-[220px] w-full">
+          <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-widest">{label}</div>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical">
               <XAxis type="number" hide />
