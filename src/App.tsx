@@ -61,10 +61,18 @@ export default function App() {
   const [pendingData, setPendingData] = useState<{headers: string[], rows: any[][], fileName: string} | null>(null);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      if (isCloudEnabled && supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (err) {
+      console.error("Error during sign out", err);
+    }
     setSession(null);
     setData(null);
     setActiveProject(null);
+    setHistoryFiles([]);
+    localStorage.removeItem('sb-bammnxoagqskukktddhl-auth-token'); 
   };
 
   // Hash Routing para Public Dashboard
@@ -144,12 +152,16 @@ export default function App() {
     root.style.setProperty('--brand-rgb', `${r}, ${g}, ${b}`);
   }, [activeProject]);
 
-  // Load history when session or project changes
+  // Load history and sync data when session or project changes
   useEffect(() => {
     if (session) {
       loadHistory();
+      // If we change project, we should reset current view to latest report of that project
+      if (activeProject) {
+          setData(null); // Clear previous project data briefly
+      }
     }
-  }, [session, activeProject]);
+  }, [session, activeProject?.id]);
 
   const loadHistory = async () => {
     try {
@@ -157,11 +169,12 @@ export default function App() {
       const sorted = files.reverse();
       setHistoryFiles(sorted); // Newest first
       
-      // Auto-load last file if none loaded and we are on upload tab
-      if (!data && sorted.length > 0 && activeTab === 'upload') {
+      // Auto-load last file of the selected project
+      if (sorted.length > 0) {
         loadFromHistory(sorted[0]);
-      } else if (sorted.length === 0) {
+      } else {
         setData(null);
+        setReportName('');
       }
     } catch (err) {
       console.error("Failed to load history", err);
@@ -538,14 +551,7 @@ export default function App() {
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
                 {session?.user?.email?.substring(0, 2).toUpperCase() || 'AD'}
               </div>
-              <button 
-                onClick={handleSignOut}
-                className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
-                title="Cerrar Sesión"
-              >
-                <LogOut size={20} />
-              </button>
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
                   {session?.user?.email || 'Admin User'}
                 </span>
@@ -564,22 +570,20 @@ export default function App() {
                 !isSidebarOpen && "justify-center px-0"
                 )}
             >
-                {theme === 'light' ? <Moon size={18} className="icon-shadow" /> : <Sun size={18} className="icon-shadow text-yellow-500" />}
+                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} className="text-yellow-500" />}
                 {isSidebarOpen && (theme === 'light' ? "Modo Oscuro" : "Modo Claro")}
             </button>
             
-             {isCloudEnabled && (
-               <button
-                   onClick={() => supabase.auth.signOut()}
-                   className={cn(
-                   "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors text-sm font-medium",
-                   !isSidebarOpen && "justify-center px-0"
-                   )}
-               >
-                   <LogOut size={18} />
-                   {isSidebarOpen && "Cerrar Sesión"}
-               </button>
-             )}
+             <button
+                 onClick={handleSignOut}
+                 className={cn(
+                 "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors text-sm font-medium",
+                 !isSidebarOpen && "justify-center px-0"
+                 )}
+             >
+                 <LogOut size={18} />
+                 {isSidebarOpen && "Cerrar Sesión"}
+             </button>
           </div>
         </div>
       </aside>

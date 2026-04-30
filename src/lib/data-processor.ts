@@ -11,7 +11,7 @@ export interface DataStats {
   dateRange: string;
   sessionsByHour: { hour: string; count: number }[];
   sessionsByChannel: { channel: string; count: number }[];
-  numericStats: Record<string, { min: number; max: number; mean: number; sum: number }>;
+  numericStats: Record<string, { min: number; max: number; mean: number; sum: number; cv: number }>;
   columnTotals: Record<string, number | string>;
   avgDuration?: string;
   totalDuration?: string;
@@ -77,7 +77,21 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     // Check for Date
     const isDate = sampleValues.every(v => isValid(new Date(v)) && v.includes('/') || v.includes('-'));
     // Check for Numeric
-    const isNumeric = sampleValues.every(v => !isNaN(parseFloat(v.replace(/[,%]/g, ''))));
+    const isNumeric = sampleValues.length > 0 && sampleValues.every(v => {
+        const n = v.replace(/[,%]/g, '');
+        return !isNaN(parseFloat(n)) && isFinite(Number(n));
+    });
+    
+    // Check for ID-like column (numbers that shouldn't be averaged)
+    const looksLikeId = isNumeric && (
+        normalize(header).includes('id') || 
+        normalize(header).includes('num') || 
+        normalize(header).includes('folio') || 
+        normalize(header).includes('contacto') ||
+        normalize(header).includes('sesion') ||
+        sampleValues.some(v => v.length > 10) // Large numbers are usually IDs
+    );
+    
     // Check for Time (HH:mm)
     const isTime = sampleValues.every(v => v.includes(':') && v.split(':').length >= 2);
     
@@ -86,7 +100,7 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       header,
       normHeader: normalize(header),
       isDate,
-      isNumeric,
+      isNumeric: isNumeric && !looksLikeId, // Exclude IDs from numeric processing
       isTime,
       uniqueCount: uniqueValues.size,
       categoryScore: uniqueValues.size > 0 && uniqueValues.size < 25 ? (1 - (uniqueValues.size / Math.max(1, sampleValues.length))) : 0
@@ -179,7 +193,12 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
 
   Object.entries(numericValues).forEach(([key, values]) => {
     const sum = values.reduce((a, b) => a + b, 0);
-    numericStats[key] = { min: Math.min(...values), max: Math.max(...values), sum, mean: sum / values.length };
+    const mean = sum / values.length;
+    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    const cv = mean > 0 ? (stdDev / mean) * 100 : 0;
+
+    numericStats[key] = { min: Math.min(...values), max: Math.max(...values), sum, mean, cv };
     
     const prof = columnProfiles.find(p => p.header === key);
     if (prof?.normHeader.includes('duracion') || prof?.normHeader.includes('tiempo')) {
@@ -191,16 +210,38 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
 
   // Metrics (Schema-Agnostic approximations)
   const slaIdx = columnProfiles.find(p => p.normHeader.includes('sla') || p.normHeader.includes('cumplimiento'))?.index ?? -1;
-  const slaCompliance = slaIdx !== -1 ? (numericStats[headers[slaIdx]]?.mean || 0) : 85.5; // Fallback to realistic mock if not found
+  const slaCompliance = slaIdx !== -1 ? (numericStats[headers[slaIdx]]?.mean || 0) : 0; 
   
   const botIdx = columnProfiles.find(p => p.normHeader.includes('bot') || p.normHeader.includes('autoconsulta'))?.index ?? -1;
-  const botSuccessRate = botIdx !== -1 ? (numericStats[headers[botIdx]]?.mean || 0) : 62.3;
+  const botSuccessRate = botIdx !== -1 ? (numericStats[headers[botIdx]]?.mean || 0) : 0;
+
+  // Efficiency Index (Talk Time / Total Time approximation)
+  const talkIdx = columnProfiles.find(p => p.normHeader.includes('conversacion') || p.normHeader.includes('habla') || p.normHeader.includes('talk'))?.index ?? -1;
+  const totalTimeIdx = columnProfiles.find(p => p.normHeader.includes('duracion total') || p.normHeader.includes('total time'))?.index ?? -1;
+  
+  let efficiencyIndex = 0;
+  if (talkIdx !== -1 && totalTimeIdx !== -1) {
+      const talkSum = numericStats[headers[talkIdx]]?.sum || 0;
+      const totalSum = numericStats[headers[totalTimeIdx]]?.sum || 0;
+      efficiencyIndex = totalSum > 0 ? (talkSum / totalSum) * 100 : 0;
+  } else if (slaIdx !== -1) {
+      efficiencyIndex = slaCompliance * 0.9; // Proxy if no duration data
+  }
+
+  // Transfer and Response counts (Strict detection)
+  const transferIdx = columnProfiles.find(p => p.normHeader.includes('transf') || p.normHeader.includes('desvio'))?.index ?? -1;
+  const totalTransfers = transferIdx !== -1 ? (numericStats[headers[transferIdx]]?.sum || 0) : 0;
+
+  const responseIdx = columnProfiles.find(p => p.normHeader.includes('respuesta') || p.normHeader.includes('mensaje') || p.normHeader.includes('response'))?.index ?? -1;
+  const totalResponses = responseIdx !== -1 ? (numericStats[headers[responseIdx]]?.sum || 0) : 0;
+
+  const userIdx = columnProfiles.find(p => p.normHeader.includes('user') || p.normHeader.includes('usuario') || p.normHeader.includes('cliente') || (p.isId && p.normHeader.includes('id')))?.index ?? 0;
 
   return {
     processedRows,
     stats: {
       totalSessions: rows.length,
-      uniqueUsers: new Set(rows.map(r => r[0])).size, // Assume first col is some ID if not found
+      uniqueUsers: new Set(rows.map(r => r[userIdx])).size,
       dateRange,
       sessionsByHour,
       sessionsByChannel: categoricalStats[0]?.map(s => ({ channel: s.label, count: s.count })) || [],
@@ -211,9 +252,9 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       columnTotals,
       slaCompliance,
       botSuccessRate,
-      efficiencyIndex: 78.4,
-      totalTransfers: Math.round(rows.length * 0.12),
-      totalResponses: Math.round(rows.length * 4.5),
+      efficiencyIndex,
+      totalTransfers,
+      totalResponses,
       peakHour: sessionsByHour.reduce((p, c) => (p.count > c.count) ? p : c, sessionsByHour[0]),
       detectedSchema: {
         categorical: categoricalProfiles.map(p => p.header),

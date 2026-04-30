@@ -63,6 +63,8 @@ export async function getFiles(projectId?: string) {
     
     if (projectId) {
       query = query.eq('project_id', projectId);
+    } else {
+      query = query.is('project_id', null);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
@@ -82,7 +84,7 @@ export async function getFiles(projectId?: string) {
     if (projectId) {
       return all.filter((f: any) => f.project_id === projectId);
     }
-    return all;
+    return all.filter((f: any) => !f.project_id);
   }
 }
 

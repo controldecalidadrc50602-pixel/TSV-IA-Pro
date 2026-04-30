@@ -97,20 +97,22 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
   // ── Numeric Summary Table ──────────────────────────────────────────────────
   const numericSummary = useMemo(() => {
     return Object.entries(stats.numericStats).map(([key, s]) => {
-      const values_arr = [s.min, s.max, s.mean];
-      const variance = values_arr.reduce((a, b) => a + Math.pow(b - s.mean, 2), 0) / values_arr.length;
-      const median = s.mean; // Approximation
       return {
         key,
         min: s.min,
         max: s.max,
         mean: s.mean,
         sum: s.sum,
-        median,
-        cv: s.mean > 0 ? ((Math.sqrt(variance) / s.mean) * 100).toFixed(1) : '0',
+        cv: s.cv.toFixed(1),
       };
     });
   }, [stats.numericStats]);
+
+  // Helper to format numeric values (remove .0 for integers)
+  const formatNum = (val: number) => {
+      if (val % 1 === 0) return val.toLocaleString();
+      return val.toFixed(1);
+  };
 
   // ── Dynamic Top-N Data ─────────────────────────────────────────────────────
   const topNData = useMemo(() => {
@@ -403,11 +405,12 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-700">
-                  {['Columna', 'Mínimo', 'Máximo', 'Media', 'Suma Total', 'CV%'].map(h => (
-                    <th key={h} className="text-left py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest first:pl-0">
-                      {h}
-                    </th>
-                  ))}
+                  <th className="text-left py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest first:pl-0">Columna</th>
+                  <th className="text-right py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mínimo</th>
+                  <th className="text-right py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Máximo</th>
+                  <th className="text-right py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Media</th>
+                  <th className="text-right py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Suma Total</th>
+                  <th className="text-right py-3 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">CV%</th>
                 </tr>
               </thead>
               <tbody>
@@ -416,13 +419,13 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                     <td className="py-3 pl-0 pr-3 font-bold text-slate-700 dark:text-white max-w-[160px] truncate" title={row.key}>
                       {row.key}
                     </td>
-                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400">{row.min.toFixed(1)}</td>
-                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400">{row.max.toFixed(1)}</td>
-                    <td className="py-3 px-3 font-bold text-brand-turquoise">{row.mean.toFixed(1)}</td>
-                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400">{row.sum.toFixed(0)}</td>
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-right">{formatNum(row.min)}</td>
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-right">{formatNum(row.max)}</td>
+                    <td className="py-3 px-3 font-bold text-brand-turquoise text-right">{formatNum(row.mean)}</td>
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-right">{formatNum(row.sum)}</td>
+                    <td className="py-3 px-3 text-right">
                       <span className={cn(
-                        'px-2 py-0.5 rounded-md font-black',
+                        'px-2 py-0.5 rounded-md font-black inline-block min-w-[50px]',
                         parseFloat(row.cv) > 50
                           ? 'bg-red-500/10 text-red-500'
                           : parseFloat(row.cv) > 25

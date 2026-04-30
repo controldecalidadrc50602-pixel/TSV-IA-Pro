@@ -119,7 +119,7 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
       );
   }
 
-  if (type === 'efficiency' || type === 'overview' || type === 'hourly' || type === 'strategy') {
+   if (type === 'efficiency' || type === 'overview' || type === 'hourly' || type === 'strategy') {
     const data = stats.sessionsByHour?.filter(h => h.count > 0) ?? [];
     return (
       <div className="h-[220px] w-full">
@@ -131,11 +131,24 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
                 <stop offset="95%" stopColor="#2DD4BF" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
-            <XAxis dataKey="hour" fontSize={9} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#475569' }} />
-            <YAxis fontSize={9} tickLine={false} axisLine={false} tick={{ fill: '#475569' }} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+            <XAxis 
+                dataKey="hour" 
+                fontSize={10} 
+                fontWeight={700} 
+                tickLine={false} 
+                axisLine={false} 
+                tick={{ fill: '#94A3B8' }} 
+                tickFormatter={(v) => `${v}h`}
+            />
+            <YAxis 
+                fontSize={10} 
+                tickLine={false} 
+                axisLine={false} 
+                tick={{ fill: '#94A3B8' }} 
+            />
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Area type="monotone" dataKey="count" stroke="#0D9488" strokeWidth={3}
+            <Area type="monotone" dataKey="count" stroke="#2DD4BF" strokeWidth={3}
               fillOpacity={1} fill="url(#areaGrad)" name="Sesiones" />
           </AreaChart>
         </ResponsiveContainer>
@@ -498,13 +511,20 @@ export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlid
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.25 }}
-                className="bg-slate-800/60 rounded-3xl p-5 border border-slate-700/50"
+                className="bg-slate-800/80 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-2xl"
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <BarChart3 size={13} className="text-brand-turquoise" />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Data</span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 size={14} className="text-brand-turquoise" />
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Visualización Interactiva</span>
+                  </div>
+                  <div className="px-2 py-1 bg-brand-turquoise/20 rounded-md">
+                    <span className="text-[9px] font-black text-brand-turquoise uppercase">Real-time</span>
+                  </div>
                 </div>
-                <SlideChart type={slide?.type} stats={stats} />
+                <div className="mt-2">
+                  <SlideChart type={slide?.type} stats={stats} />
+                </div>
               </motion.div>
             </div>
           </motion.div>
