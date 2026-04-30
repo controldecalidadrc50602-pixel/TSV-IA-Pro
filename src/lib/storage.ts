@@ -21,7 +21,7 @@ async function initLocalDB() {
   });
 }
 
-export async function saveFile(name: string, headers: string[], data: any[][]) {
+export async function saveFile(name: string, headers: string[], data: any[][], projectId?: string) {
   if (isCloudEnabled) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No authenticated user");
@@ -32,7 +32,8 @@ export async function saveFile(name: string, headers: string[], data: any[][]) {
         name,
         headers,
         data,
-        user_id: user.id
+        user_id: user.id,
+        project_id: projectId
       }])
       .select()
       .single();
@@ -48,17 +49,23 @@ export async function saveFile(name: string, headers: string[], data: any[][]) {
       date: new Date(),
       headers,
       data,
+      project_id: projectId
     });
     return id;
   }
 }
 
-export async function getFiles() {
+export async function getFiles(projectId?: string) {
   if (isCloudEnabled) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('reports')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
+    
+    if (projectId) {
+      query = query.eq('project_id', projectId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error("Error fetching files from Supabase", error);
@@ -71,7 +78,11 @@ export async function getFiles() {
     }));
   } else {
     const db = await initLocalDB();
-    return db.getAllFromIndex(STORE_NAME, 'by-date');
+    const all = await db.getAllFromIndex(STORE_NAME, 'by-date');
+    if (projectId) {
+      return all.filter((f: any) => f.project_id === projectId);
+    }
+    return all;
   }
 }
 

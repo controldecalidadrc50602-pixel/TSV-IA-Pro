@@ -28,7 +28,22 @@
 }
 
 body {
-  @apply antialiased bg-brand-gray text-brand-text selection:bg-teal-100 selection:text-teal-900;
+  @apply antialiased bg-brand-gray text-brand-text selection:bg-teal-100 selection:text-teal-900 transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-dark-bg text-dark-text;
+}
+
+/* Base Component Overrides for Dark Mode */
+@layer base {
+  .dark h1, .dark h2, .dark h3, .dark h4 {
+    @apply text-white;
+  }
+  
+  .dark p {
+    @apply text-slate-400;
+  }
 }
 
 /* Estilos de Impresión para Modo Presentación */
@@ -69,24 +84,6 @@ body {
     background: white !important;
     color: #0f172a !important;
   }
-}
-
-/* Forzar Modo Oscuro si Tailwind/Vite tiene conflictos de selector */
-.dark body {
-  background-color: #0B0E14 !important;
-  color: #F1F5F9 !important;
-}
-
-.dark .bg-white {
-  background-color: #151A24 !important;
-}
-
-.dark .border-slate-200 {
-  border-color: #232B3B !important;
-}
-
-.dark .text-brand-dark {
-  color: #FFFFFF !important;
 }
 
 /* Efectos Startup High-Impact */

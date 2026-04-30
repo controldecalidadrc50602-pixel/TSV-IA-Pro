@@ -22,6 +22,8 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase, isCloudEnabled } from '@/lib/supabase';
 import { Auth } from '@/components/Auth';
+import { ProjectManager, Project } from '@/components/ProjectManager';
+import { ExecutiveBriefing } from '@/components/ExecutiveBriefing';
 import { Session } from '@supabase/supabase-js';
 
 interface ParsedData {
@@ -53,6 +55,8 @@ export default function App() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(localStorage.getItem('tsv_logo'));
   const [publicShareId, setPublicShareId] = useState<string | null>(null);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [isBriefingOpen, setIsBriefingOpen] = useState(false);
 
   // Hash Routing para Public Dashboard
   useEffect(() => {
@@ -118,22 +122,37 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Load history on mount
+  // Apply Brand Color from Project
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const brandColor = activeProject?.brand_color || '#2DD4BF';
+    root.style.setProperty('--color-brand-turquoise', brandColor);
+    
+    // Generar variante oscura del color de marca para sombras y efectos
+    const r = parseInt(brandColor.slice(1, 3), 16);
+    const g = parseInt(brandColor.slice(3, 5), 16);
+    const b = parseInt(brandColor.slice(5, 7), 16);
+    root.style.setProperty('--brand-rgb', `${r}, ${g}, ${b}`);
+  }, [activeProject]);
+
+  // Load history when session or project changes
   useEffect(() => {
     if (session) {
       loadHistory();
     }
-  }, [session]);
+  }, [session, activeProject]);
 
   const loadHistory = async () => {
     try {
-      const files = await getFiles();
+      const files = await getFiles(activeProject?.id);
       const sorted = files.reverse();
       setHistoryFiles(sorted); // Newest first
       
-      // Auto-load last file if none loaded
+      // Auto-load last file if none loaded and we are on upload tab
       if (!data && sorted.length > 0 && activeTab === 'upload') {
         loadFromHistory(sorted[0]);
+      } else if (sorted.length === 0) {
+        setData(null);
       }
     } catch (err) {
       console.error("Failed to load history", err);
@@ -166,6 +185,7 @@ export default function App() {
       setReportName(fileName.split('.')[0]); // Default report name
       setActiveTab('dashboard'); // Auto switch to dashboard
       setIsLoading(false);
+      setIsBriefingOpen(true); // Open AI Briefing automatically on new upload
 
       // Reset previous insights
       setInsightsFindings([]);
@@ -265,7 +285,7 @@ export default function App() {
 
     setIsLoading(true);
     try {
-      await saveFile(reportName, data.headers, data.rows);
+      await saveFile(reportName, data.headers, data.rows, activeProject?.id);
       await loadHistory();
       
       // Clear screen and reset
@@ -421,12 +441,18 @@ export default function App() {
     return <Auth />;
   }
 
-  if (publicShareId) {
-      return <PublicDashboard shareId={publicShareId} />;
-  }
+      {publicShareId && <PublicDashboard shareId={publicShareId} />}
+      
+      {data && (
+        <ExecutiveBriefing 
+          isOpen={isBriefingOpen}
+          onClose={() => setIsBriefingOpen(false)}
+          stats={data.stats}
+          insights={data.insights}
+        />
+      )}
 
-  return (
-    <div className="flex h-screen bg-brand-gray dark:bg-dark-bg overflow-hidden font-sans transition-colors duration-300">
+      <div className="flex h-screen bg-brand-gray dark:bg-dark-bg overflow-hidden font-sans transition-colors duration-300">
       {/* Sidebar */}
       <aside 
         className={cn(
@@ -446,7 +472,24 @@ export default function App() {
           </button>
         </div>
 
+        {/* Cloud Status Indicator */}
+        {isSidebarOpen && isCloudEnabled && (
+          <div className="px-6 mb-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full w-fit">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Cloud Synchronized</span>
+            </div>
+          </div>
+        )}
+
         <nav className="flex-1 px-4 space-y-6 mt-4 overflow-y-auto no-scrollbar">
+          <div className="px-2 mb-4">
+             <ProjectManager 
+                activeProjectId={activeProject?.id} 
+                onProjectSelect={setActiveProject} 
+             />
+          </div>
+
           <SidebarGroup label="Workspace" id="workspace" icon={Database}>
             <NavItem tab="upload" icon={UploadCloud} label="Carga de Datos" active={activeTab === 'upload'} />
             <NavItem tab="viewer" icon={TableIcon} label="Visor Interactivo" active={activeTab === 'viewer'} />
@@ -474,15 +517,19 @@ export default function App() {
           </SidebarGroup>
         </nav>
 
-        <div className="p-4 border-t border-slate-100 space-y-3">
+        <div className="p-4 border-t border-slate-100 dark:border-dark-border space-y-3">
           {isSidebarOpen && (
             <div className="flex items-center gap-3 px-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-brand-dark dark:bg-brand-turquoise text-white flex items-center justify-center text-xs font-bold">
-                AD
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
+                {session?.user?.email?.substring(0, 2).toUpperCase() || 'AD'}
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-brand-dark dark:text-white">Admin User</span>
-                <span className="text-xs text-slate-400">Empresa S.A.</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                  {session?.user?.email || 'Admin User'}
+                </span>
+                <span className="text-[10px] text-brand-turquoise font-bold uppercase tracking-tighter truncate">
+                  {activeProject?.name || 'Personal Workspace'}
+                </span>
               </div>
             </div>
           )}
@@ -533,6 +580,16 @@ export default function App() {
           <div className="flex items-center gap-3">
             {data && (
               <>
+                <button 
+                  onClick={() => setIsBriefingOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-turquoise/10 border border-brand-turquoise/20 text-brand-turquoise hover:bg-brand-turquoise hover:text-white transition-all text-sm font-bold shadow-sm"
+                >
+                  <Sparkles size={18} />
+                  <span className="hidden md:inline">AI Briefing</span>
+                </button>
+
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
                 <button 
                   onClick={handleExportExcel}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-turquoise hover:text-brand-turquoise transition-all text-sm font-medium shadow-sm"
@@ -880,10 +937,11 @@ export default function App() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="absolute top-0 right-0 bottom-0 z-30 shadow-2xl"
             >
-              <ChatAssistant
-                dataSummary={data.summary}
-                rawStats={data.stats}
-                onClose={() => setIsChatOpen(false)}
+              <ChatAssistant 
+                dataSummary={data?.summary || ''} 
+                rawStats={data?.stats}
+                onClose={() => setIsChatOpen(false)} 
+                projectId={activeProject?.id}
               />
             </motion.div>
           )}

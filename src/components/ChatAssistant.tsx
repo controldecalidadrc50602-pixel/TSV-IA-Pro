@@ -9,6 +9,7 @@ interface ChatAssistantProps {
   dataSummary: string;
   rawStats?: DataStats;
   onClose?: () => void;
+  projectId?: string;
 }
 
 interface Message {
@@ -25,13 +26,32 @@ const QUICK_QUESTIONS = [
   '¿Qué recomiendas mejorar?',
 ];
 
-export function ChatAssistant({ dataSummary, rawStats, onClose }: ChatAssistantProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'model',
-      content: '👋 Hola! Soy tu analista de datos con IA. Puedo responderte con texto **y gráficos** generados en tiempo real. ¿Qué quieres analizar?',
+export function ChatAssistant({ dataSummary, rawStats, onClose, projectId }: ChatAssistantProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  // Load project-specific chat history
+  useEffect(() => {
+    const cacheKey = `tsv_chat_${projectId || 'default'}`;
+    const saved = localStorage.getItem(cacheKey);
+    if (saved) {
+      setMessages(JSON.parse(saved));
+    } else {
+      setMessages([
+        {
+          role: 'model',
+          content: '👋 Hola! Soy tu analista de datos con IA. Puedo responderte con texto **y gráficos** generados en tiempo real. ¿Qué quieres analizar?',
+        }
+      ]);
     }
-  ]);
+  }, [projectId]);
+
+  // Persist chat history
+  useEffect(() => {
+    if (messages.length > 0) {
+      const cacheKey = `tsv_chat_${projectId || 'default'}`;
+      localStorage.setItem(cacheKey, JSON.stringify(messages));
+    }
+  }, [messages, projectId]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
