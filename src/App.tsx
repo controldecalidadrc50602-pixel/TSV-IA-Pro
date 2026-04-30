@@ -441,8 +441,12 @@ export default function App() {
     return <Auth />;
   }
 
-      {publicShareId && <PublicDashboard shareId={publicShareId} />}
-      
+  if (publicShareId) {
+    return <PublicDashboard shareId={publicShareId} />;
+  }
+
+  return (
+    <>
       {data && (
         <ExecutiveBriefing 
           isOpen={isBriefingOpen}
@@ -948,5 +952,6 @@ export default function App() {
         </AnimatePresence>
       </main>
     </div>
+    </>
   );
 }
