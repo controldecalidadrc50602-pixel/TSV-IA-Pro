@@ -5,6 +5,7 @@ import { FileUpload } from '@/components/FileUpload';
 import { DataTable } from '@/components/DataTable';
 import { Dashboard } from '@/components/Dashboard';
 import { PresentationMode } from '@/components/PresentationMode';
+import { AnalyticsPanel } from '@/components/AnalyticsPanel';
 import { ChatAssistant } from '@/components/ChatAssistant';
 import { InsightsBar, Finding } from '@/components/InsightsBar';
 import { processData, generateDataSummary, DataStats } from '@/lib/data-processor';
@@ -15,7 +16,7 @@ import {
   History, UploadCloud, Download, Menu, X, MessageSquare,
   LogOut, Save, CheckCircle, Database, Vault, Presentation,
   Settings as SettingsIcon, Sun, Moon, Image as ImageIcon,
-  Sparkles, TrendingUp, ShieldCheck
+  Sparkles, TrendingUp, ShieldCheck, FlaskConical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase, isCloudEnabled } from '@/lib/supabase';
@@ -31,7 +32,7 @@ interface ParsedData {
   insights?: string; // New field for AI insights
 }
 
-type Tab = 'upload' | 'viewer' | 'dashboard' | 'history' | 'presentation' | 'settings';
+type Tab = 'upload' | 'viewer' | 'dashboard' | 'analytics' | 'history' | 'presentation' | 'settings';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -431,6 +432,7 @@ export default function App() {
 
           <SidebarGroup label="Analytics" id="analytics" icon={LayoutDashboard}>
             <NavItem tab="dashboard" icon={LayoutDashboard} label="Live Dashboard" active={activeTab === 'dashboard'} />
+            <NavItem tab="analytics" icon={FlaskConical} label="Estadísticas" active={activeTab === 'analytics'} />
             <NavItem tab="presentation" icon={Presentation} label="Modo Presentación" active={activeTab === 'presentation'} />
             <NavItem tab="history" icon={Vault} label="Bóveda de Datos" active={activeTab === 'history'} />
           </SidebarGroup>
@@ -500,6 +502,7 @@ export default function App() {
               {activeTab === 'upload' && 'Nueva Lectura'}
               {activeTab === 'viewer' && 'Explorador de Datos'}
               {activeTab === 'dashboard' && 'Dashboard Ejecutivo'}
+              {activeTab === 'analytics' && 'Estadísticas Avanzadas'}
               {activeTab === 'history' && 'Bóveda de Reportes'}
             </h2>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Gestión Inteligente de Datos TSV</p>
@@ -625,6 +628,33 @@ export default function App() {
               >
                 <Dashboard stats={data.stats} insights={data.insights} />
               </motion.div>
+            )}
+
+            {activeTab === 'analytics' && data && (
+              <motion.div
+                key="analytics"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+              >
+                <AnalyticsPanel stats={data.stats} />
+              </motion.div>
+            )}
+
+            {activeTab === 'analytics' && !data && (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                  <FlaskConical size={40} className="opacity-40" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">Sin datos para analizar</h3>
+                <p className="max-w-xs text-center mb-8">Carga un archivo o selecciona uno de la bóveda para usar el panel de estadísticas.</p>
+                <button
+                  onClick={() => setActiveTab('upload')}
+                  className="px-6 py-3 bg-brand-dark text-white rounded-xl font-medium hover:bg-black transition-colors shadow-lg shadow-slate-200"
+                >
+                  Ir a Carga de Datos
+                </button>
+              </div>
             )}
 
             {activeTab === 'presentation' && data && (
