@@ -146,7 +146,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
               </div>
               <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Anomalías Detectadas</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Se han detectado {stats.anomalies.length} desviaciones estadísticas fuera de la norma (Z-Score > 3).
+                Se han detectado {stats.anomalies.length} desviaciones estadísticas fuera de la norma (Z-Score &gt; 3).
               </p>
             </div>
             <div className="mt-4 space-y-2">
