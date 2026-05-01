@@ -15,9 +15,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
   History, UploadCloud, Download, Menu, X, MessageSquare,
-  LogOut, Save, CheckCircle, Database, Vault, Presentation,
+  LogOut, Save, Database, Vault, Presentation,
   Settings as SettingsIcon, Sun, Moon, Image as ImageIcon,
-  Sparkles, TrendingUp, ShieldCheck, FlaskConical
+  Sparkles, ShieldCheck, FlaskConical, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase, isCloudEnabled } from '@/lib/supabase';
@@ -531,7 +531,7 @@ export default function App() {
               <span className="text-[8px] font-black text-brand-turquoise uppercase tracking-widest">Enterprise Cloud Active</span>
             </div>
           </div>
-        )/* ... resto de Sidebar ... */}
+        )}
 
         <nav className="flex-1 px-4 space-y-6 mt-4 overflow-y-auto no-scrollbar">
           <div className="px-2 mb-4">
