@@ -13,7 +13,7 @@ import { processData, generateDataSummary, DataStats } from '@/lib/data-processo
 import { saveFile, getFiles, deleteFile, savePublicShare } from '@/lib/storage';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Loader2, AlertCircle, LayoutDashboard, Table as TableIcon, 
+  Loader2, AlertCircle, LayoutDashboard as DashboardIcon, Table as TableIcon, 
   History, UploadCloud, Download, Menu, X, MessageSquare,
   LogOut, Save, Database, Vault, Presentation,
   Settings as SettingsIcon, Sun, Moon, Image as ImageIcon,
@@ -546,8 +546,8 @@ export default function App() {
             <NavItem tab="viewer" icon={TableIcon} label="Visor Interactivo" active={activeTab === 'viewer'} />
           </SidebarGroup>
 
-          <SidebarGroup label="Analytics" id="analytics" icon={LayoutDashboard}>
-            <NavItem tab="dashboard" icon={LayoutDashboard} label="Live Dashboard" active={activeTab === 'dashboard'} />
+          <SidebarGroup label="Analytics" id="analytics" icon={DashboardIcon}>
+            <NavItem tab="dashboard" icon={DashboardIcon} label="Live Dashboard" active={activeTab === 'dashboard'} />
             <NavItem tab="analytics" icon={FlaskConical} label="Estadísticas" active={activeTab === 'analytics'} />
             <NavItem tab="presentation" icon={Presentation} label="Modo Presentación" active={activeTab === 'presentation'} />
             <NavItem tab="history" icon={Vault} label="Bóveda de Datos" active={activeTab === 'history'} />
@@ -982,7 +982,7 @@ export default function App() {
                                 onClick={() => loadFromHistory(file, 'dashboard')}
                                 className="flex items-center justify-center gap-2 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-brand-turquoise text-white rounded-2xl text-xs font-black transition-all shadow-lg hover:shadow-brand-turquoise/20"
                                >
-                                  <LayoutDashboard size={14} /> Dashboard
+                                  <DashboardIcon size={14} /> Dashboard
                                </button>
                                <button 
                                 onClick={() => loadFromHistory(file, 'viewer')}
