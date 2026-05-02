@@ -34,28 +34,33 @@ export function Auth() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden font-sans">
-      {/* Background Decorative Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-turquoise/20 rounded-full blur-[120px] animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]"></div>
+      {/* Background Decorative Elements - More vibrant for Premium feel */}
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-brand-turquoise/20 rounded-full blur-[140px] animate-pulse"></div>
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[140px]"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.05)_0%,transparent_70%)]"></div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md glass-startup p-10 rounded-[2.5rem] relative z-10 border border-white/10 shadow-2xl"
+        className="w-full max-w-md bg-slate-900/40 backdrop-blur-3xl p-10 rounded-[3rem] relative z-10 border border-white/10 shadow-[0_25px_80px_-15px_rgba(0,0,0,0.6)]"
       >
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center p-3 bg-brand-turquoise/10 rounded-2xl mb-4 border border-brand-turquoise/20">
-            <ShieldCheck className="text-brand-turquoise icon-shadow" size={32} />
+          <div className="inline-flex items-center justify-center p-4 bg-brand-turquoise rounded-3xl mb-6 shadow-lg shadow-brand-turquoise/40 rotate-3 transition-transform hover:rotate-0">
+            <ShieldCheck className="text-white" size={32} />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight mb-2 italic">
+          <h1 className="text-4xl font-black text-white tracking-tighter mb-2 italic">
             TSV <span className="text-brand-turquoise not-italic">INTEL PRO</span>
           </h1>
-          <p className="text-slate-400 text-sm font-medium">Plataforma Elite de Inteligencia Operativa</p>
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-px w-8 bg-slate-700"></div>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">Forensic Intelligence</p>
+            <div className="h-px w-8 bg-slate-700"></div>
+          </div>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Email Corporativo</label>
+            <label className="text-[10px] font-black text-brand-turquoise uppercase tracking-widest ml-1 opacity-80">Credenciales de Acceso</label>
             <div className="relative group">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-turquoise transition-colors" size={18} />
               <input 
@@ -63,14 +68,13 @@ export function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-turquoise/50 focus:ring-4 focus:ring-brand-turquoise/10 transition-all"
-                placeholder="ejemplo@empresa.com"
+                className="w-full bg-slate-950/80 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-turquoise focus:ring-4 focus:ring-brand-turquoise/10 transition-all font-medium"
+                placeholder="email@corporativo.com"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
             <div className="relative group">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-turquoise transition-colors" size={18} />
               <input 
@@ -78,8 +82,8 @@ export function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-turquoise/50 focus:ring-4 focus:ring-brand-turquoise/10 transition-all"
-                placeholder="••••••••"
+                className="w-full bg-slate-950/80 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-turquoise focus:ring-4 focus:ring-brand-turquoise/10 transition-all font-medium"
+                placeholder="••••••••••••"
               />
             </div>
           </div>
@@ -89,10 +93,10 @@ export function Auth() {
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3"
+                className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-start gap-3"
               >
                 <AlertCircle className="text-red-500 shrink-0" size={18} />
-                <p className="text-xs text-red-200 leading-relaxed">{error}</p>
+                <p className="text-xs text-red-400 font-bold leading-relaxed">{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -104,10 +108,10 @@ export function Auth() {
                 localStorage.setItem('tsv_mock_session', 'true');
                 window.location.reload();
               }}
-              className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+              className="w-full bg-white text-slate-950 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 border border-white"
             >
               <ShieldCheck size={20} className="text-brand-turquoise" />
-              <span>Acceder en Modo Local</span>
+              <span>DESBLOQUEAR MODO LOCAL</span>
             </button>
           )}
 
@@ -115,15 +119,15 @@ export function Auth() {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-brand-turquoise hover:bg-brand-turquoise/90 text-slate-950 font-black py-4 rounded-2xl shadow-xl shadow-brand-turquoise/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group"
+              className="w-full bg-brand-turquoise hover:bg-brand-turquoise/90 text-slate-950 font-black py-4 rounded-2xl shadow-2xl shadow-brand-turquoise/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-3 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
-                  {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
-                  <span>{isLogin ? "Iniciar Sesión Elite" : "Crear Cuenta Business"}</span>
-                  <Sparkles size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <LogIn size={20} />
+                  <span>{isLogin ? "AUTENTICACIÓN ELITE" : "REGISTRAR TERMINAL"}</span>
+                  <Sparkles size={16} className="text-white/50 animate-pulse" />
                 </>
               )}
             </button>
@@ -133,8 +137,8 @@ export function Auth() {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/5"></div>
             </div>
-            <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold">
-              <span className="bg-slate-950 px-4 text-slate-600">O continuar con</span>
+            <div className="relative flex justify-center text-[9px] uppercase tracking-[0.3em] font-black">
+              <span className="bg-slate-900/0 backdrop-blur-md px-4 text-slate-500">SSO Gateway</span>
             </div>
           </div>
 
@@ -151,7 +155,7 @@ export function Auth() {
               if (error) setError(error.message);
               setLoading(false);
             }}
-            className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-3 group"
+            className="w-full bg-slate-800/40 hover:bg-slate-800/60 text-white font-bold py-4 rounded-2xl border border-white/5 transition-all flex items-center justify-center gap-3 group"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -164,20 +168,20 @@ export function Auth() {
         </form>
 
         <div className="mt-8 text-center pt-6 border-t border-white/5">
-          <p className="text-slate-500 text-xs mb-4">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-4">
             {isLogin ? "¿Nuevo en la plataforma?" : "¿Ya tienes una cuenta?"}
           </p>
           <button 
             onClick={() => setIsLogin(!isLogin)}
-            className="text-brand-turquoise font-bold text-sm hover:underline tracking-tight"
+            className="text-brand-turquoise font-black text-xs hover:text-white transition-colors uppercase tracking-widest underline underline-offset-8"
           >
             {isLogin ? "Solicitar Acceso Partner" : "Acceder al Portal"}
           </button>
         </div>
       </motion.div>
       
-      <div className="absolute bottom-8 text-slate-600 text-[10px] font-medium uppercase tracking-[0.2em]">
-        Secured by TSV Cloud Infrastructure & Supabase
+      <div className="absolute bottom-8 text-slate-700 text-[9px] font-black uppercase tracking-[0.4em]">
+        TSV Elite Intelligence Platform v3.0 — Secured By Supabase
       </div>
     </div>
   );

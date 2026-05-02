@@ -270,6 +270,10 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
   const botIdx = columnProfiles.find(p => p.normHeader.includes('bot') || p.normHeader.includes('autoconsulta'))?.index ?? -1;
   const botSuccessRate = botIdx !== -1 ? (numericStats[headers[botIdx]]?.mean || 0) : 0;
 
+  // Metrics
+  const slaIdx = columnProfiles.find(p => p.normHeader.includes('sla') || p.normHeader.includes('cumplimiento'))?.index ?? -1;
+  const slaCompliance = slaIdx !== -1 ? (numericStats[headers[slaIdx]]?.mean || 0) : 0;
+
   // Efficiency Index (Talk Time / Total Time approximation)
   const talkIdx = columnProfiles.find(p => p.normHeader.includes('conversacion') || p.normHeader.includes('habla') || p.normHeader.includes('talk'))?.index ?? -1;
   const totalTimeIdx = columnProfiles.find(p => p.normHeader.includes('duracion total') || p.normHeader.includes('total time'))?.index ?? -1;
@@ -329,10 +333,6 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     });
     return newRow;
   });
-
-  // Metrics
-  const slaIdx = columnProfiles.find(p => p.normHeader.includes('sla') || p.normHeader.includes('cumplimiento'))?.index ?? -1;
-  const slaCompliance = slaIdx !== -1 ? (numericStats[headers[slaIdx]]?.mean || 0) : 0;
 
   return {
     processedRows,

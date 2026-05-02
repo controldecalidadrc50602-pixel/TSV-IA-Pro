@@ -25,6 +25,7 @@
     --brand-dark: #f8fafc;
     background-color: var(--color-dark-bg);
     color: white;
+    color-scheme: dark;
   }
 
   body {
@@ -38,7 +39,7 @@
 
 @layer components {
   .premium-card {
-    @apply bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500;
+    @apply bg-white dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500;
   }
 
   .glass-startup {

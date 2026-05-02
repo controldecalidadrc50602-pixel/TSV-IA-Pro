@@ -751,24 +751,31 @@ export default function App() {
                 exit={{ opacity: 0, scale: 0.98 }}
                 className="max-w-2xl mx-auto mt-12"
               >
-                <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 text-center">
-                  <div className="w-16 h-16 bg-brand-turquoise/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-brand-turquoise">
-                    <Database size={32} />
+                <div className="premium-card p-10 text-center">
+                  <div className="w-20 h-20 bg-brand-turquoise/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-brand-turquoise shadow-inner shadow-brand-turquoise/20">
+                    <Database size={40} className="icon-shadow" />
                   </div>
-                  <h3 className="text-2xl font-bold text-brand-dark mb-2">Carga de Reportes</h3>
-                  <p className="text-slate-500 mb-8 max-w-md mx-auto">Sube tus archivos .tsv, .csv o .xlsx para un análisis empresarial instantáneo. Procesamiento 100% local y seguro.</p>
+                  <h3 className="text-3xl font-black text-slate-800 dark:text-white mb-3 tracking-tighter">Bóveda de Inteligencia</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-sm mx-auto font-medium text-sm leading-relaxed">
+                    Sube tus archivos <span className="text-brand-turquoise font-black">.TSV</span>, .CSV o .XLSX para una decodificación forense instantánea.
+                  </p>
                   
-                  <FileUpload onFileUpload={handleFileUpload} className="border-brand-turquoise/30 hover:border-brand-turquoise bg-slate-50/50" />
+                  <div className="relative p-1 bg-slate-50 dark:bg-slate-950/50 rounded-[2.5rem] border border-slate-100 dark:border-white/5">
+                    <FileUpload onFileUpload={handleFileUpload} className="border-brand-turquoise/20 hover:border-brand-turquoise bg-white dark:bg-slate-900 shadow-sm" />
+                  </div>
                   
                   {isLoading && (
-                    <div className="mt-8 flex flex-col items-center gap-3 text-brand-turquoise">
-                      <Loader2 className="animate-spin" size={32} />
-                      <span className="font-medium text-brand-dark">Analizando datos...</span>
+                    <div className="mt-10 flex flex-col items-center gap-4 text-brand-turquoise">
+                      <div className="relative">
+                        <Loader2 className="animate-spin" size={40} />
+                        <Sparkles className="absolute -top-1 -right-1 text-brand-turquoise/50 animate-pulse" size={16} />
+                      </div>
+                      <span className="font-black text-xs uppercase tracking-[0.3em] text-slate-400">Analizando Red Neuronal...</span>
                     </div>
                   )}
                   {error && (
-                    <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 text-sm font-medium text-left">
-                      <AlertCircle size={20} className="flex-shrink-0" />
+                    <div className="mt-8 p-5 bg-red-500/5 text-red-600 dark:text-red-400 rounded-2xl flex items-center gap-4 border border-red-500/10 text-sm font-bold text-left animate-in fade-in slide-in-from-top-4">
+                      <AlertCircle size={24} className="flex-shrink-0" />
                       <span>{error}</span>
                     </div>
                   )}
