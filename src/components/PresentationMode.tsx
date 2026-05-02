@@ -167,12 +167,12 @@ const THEMES = [
     { id: 'rose', label: 'Rose (Bold)', color: 'bg-rose-500' },
 ];
 
-const SLIDE_TYPES = [
+const SLIDE_TYPES = (stats: DataStats) => [
     { id: 'overview', label: 'Resumen General' },
     { id: 'efficiency', label: 'Eficiencia Operativa' },
-    { id: 'channels', label: 'Mix de Canales' },
-    { id: 'tipification', label: 'Tipificaciones' },
-    { id: 'colas', label: 'Análisis de Colas' },
+    { id: 'channels', label: `Mix de ${stats.detectedSchema?.categorical[0] || 'Canales'}` },
+    { id: 'tipification', label: stats.detectedSchema?.categorical[1] || 'Tipificaciones' },
+    { id: 'colas', label: stats.detectedSchema?.categorical[2] || 'Análisis de Colas' },
     { id: 'hourly', label: 'Comportamiento Horario' },
     { id: 'action', label: 'Plan de Acción' },
     { id: 'strategy', label: 'Estrategia Mediano Plazo' },
@@ -367,7 +367,7 @@ export function PresentationMode({ stats, insights, onBack, logo, onGenerateSlid
                                 </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                                {SLIDE_TYPES.map(type => (
+                                {SLIDE_TYPES(stats).map(type => (
                                     <button
                                         key={type.id}
                                         onClick={() => handleToggleType(type.id)}

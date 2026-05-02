@@ -18,6 +18,8 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
   const [selectedIndices, setSelectedIndices] = useState<number[]>(
     headers.map((_, i) => i) // Default all selected
   );
+  const [customHeaders, setCustomHeaders] = useState<string[]>(headers);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
   const previewRows = rows.slice(0, 5);
 
@@ -27,10 +29,22 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
     );
   };
 
+  const handleHeaderRename = (idx: number, newName: string) => {
+    const updated = [...customHeaders];
+    updated[idx] = newName;
+    setCustomHeaders(updated);
+  };
+
+  const isGenericHeader = (header: string) => {
+    const h = header.toLowerCase();
+    return h.includes('columna') || h.includes('column') || h.includes('sin nombre') || 
+           h.includes('untitled') || h.length < 3 || /^\d+$/.test(h);
+  };
+
   const handleConfirm = () => {
-    const selectedHeaders = headers.filter((_, i) => selectedIndices.includes(i));
+    const finalHeaders = customHeaders.filter((_, i) => selectedIndices.includes(i));
     const filteredRows = rows.map(row => row.filter((_, i) => selectedIndices.includes(i)));
-    onConfirm(selectedHeaders, filteredRows);
+    onConfirm(finalHeaders, filteredRows);
   };
 
   // Helper to detect column type visually
@@ -59,7 +73,7 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
             <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">
               Curaduría de <span className="text-brand-turquoise">Métricas</span>
             </h2>
-            <p className="text-sm text-slate-500 mt-1">Selecciona las columnas que deseas integrar en el análisis de inteligencia.</p>
+            <p className="text-sm text-slate-500 mt-1">Selecciona y renombra las columnas que deseas integrar en el análisis.</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -82,64 +96,106 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Column Toggles */}
-          <div className="p-6 bg-white dark:bg-dark-card overflow-x-auto no-scrollbar">
-            <div className="flex gap-3">
+          <div className="p-6 bg-white dark:bg-dark-card overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-800">
+            <div className="flex gap-4">
               {headers.map((header, i) => {
                 const type = getColType(i);
                 const isSelected = selectedIndices.includes(i);
+                const isGeneric = isGenericHeader(customHeaders[i]);
+                
                 return (
-                  <button
+                  <div
                     key={i}
-                    onClick={() => toggleHeader(i)}
                     className={cn(
-                      "flex flex-col gap-2 p-4 rounded-2xl border transition-all shrink-0 min-w-[140px] text-left group",
+                      "flex flex-col gap-2 p-4 rounded-[1.5rem] border transition-all shrink-0 min-w-[200px] text-left group relative",
                       isSelected 
-                        ? "bg-brand-turquoise/5 border-brand-turquoise shadow-sm" 
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
+                        ? "bg-white dark:bg-slate-900 border-brand-turquoise shadow-lg shadow-brand-turquoise/5" 
+                        : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 opacity-60 grayscale"
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className={cn("p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-sm", isSelected ? "text-brand-turquoise" : "text-slate-400")}>
-                        <type.icon size={14} />
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleHeader(i)}
+                          className={cn(
+                            "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
+                            isSelected ? "bg-brand-turquoise border-brand-turquoise text-white" : "border-slate-300 dark:border-slate-700"
+                          )}
+                        >
+                          {isSelected && <Check size={12} />}
+                        </button>
+                        <div className={cn("p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800", isSelected ? "text-brand-turquoise" : "text-slate-400")}>
+                          <type.icon size={14} />
+                        </div>
                       </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border flex items-center justify-center transition-all",
-                        isSelected ? "bg-brand-turquoise border-brand-turquoise text-white" : "border-slate-300 dark:border-slate-700"
-                      )}>
-                        {isSelected && <Check size={12} />}
-                      </div>
+
+                      {isGeneric && isSelected && (
+                        <div className="flex items-center gap-1 text-[8px] font-black bg-amber-500/10 text-amber-500 px-2 py-1 rounded-md animate-pulse">
+                          <AlertCircle size={10} /> REQUERIDO
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-2">
-                      <p className={cn("text-[10px] font-bold uppercase tracking-widest mb-0.5", type.color)}>
+
+                    <div className="space-y-1">
+                      <p className={cn("text-[9px] font-black uppercase tracking-[0.2em]", type.color)}>
                         {type.label}
                       </p>
-                      <p className="text-xs font-black text-slate-800 dark:text-white truncate w-full" title={header}>
-                        {header}
-                      </p>
+                      
+                      {editingIdx === i ? (
+                        <input
+                          autoFocus
+                          value={customHeaders[i]}
+                          onChange={(e) => handleHeaderRename(i, e.target.value)}
+                          onBlur={() => setEditingIdx(null)}
+                          onKeyDown={(e) => e.key === 'Enter' && setEditingIdx(null)}
+                          className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-lg px-2 py-1.5 text-xs font-black text-brand-turquoise focus:ring-1 focus:ring-brand-turquoise outline-none"
+                        />
+                      ) : (
+                        <div 
+                          onClick={() => isSelected && setEditingIdx(i)}
+                          className={cn(
+                            "group/label flex items-center justify-between gap-2 cursor-text p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                            isGeneric && isSelected && "bg-amber-500/5"
+                          )}
+                        >
+                          <span className={cn(
+                            "text-sm font-black truncate flex-1",
+                            isSelected ? "text-slate-900 dark:text-white" : "text-slate-400",
+                            isGeneric && isSelected && "text-amber-600 dark:text-amber-500"
+                          )}>
+                            {customHeaders[i]}
+                          </span>
+                          {isSelected && <Settings2 size={12} className="text-slate-300 group-hover/label:text-brand-turquoise transition-colors" />}
+                        </div>
+                      )}
+                      
+                      {isSelected && customHeaders[i] !== headers[i] && (
+                        <p className="text-[8px] font-bold text-slate-400 italic">Orig: {headers[i]}</p>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
           </div>
 
           {/* Table Preview */}
-          <div className="flex-1 p-6 bg-slate-50 dark:bg-dark-bg overflow-hidden flex flex-col">
+          <div className="flex-1 p-8 bg-slate-50 dark:bg-dark-bg overflow-hidden flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <TableIcon size={16} className="text-slate-400" />
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Previsualización de Estructura</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Previsualización con Nuevos Nombres</span>
             </div>
             
-            <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm custom-scrollbar">
+            <div className="flex-1 overflow-auto rounded-[2rem] border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm custom-scrollbar">
               <table className="w-full text-left border-collapse min-w-full">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-dark-border">
                     {headers.map((h, i) => (
                       <th key={i} className={cn(
-                        "px-6 py-4 text-[10px] font-bold uppercase tracking-widest transition-opacity duration-300",
-                        selectedIndices.includes(i) ? "text-slate-800 dark:text-slate-200" : "text-slate-300 dark:text-slate-700 opacity-30"
+                        "px-6 py-5 text-[10px] font-black uppercase tracking-widest transition-all",
+                        selectedIndices.includes(i) ? "text-brand-turquoise bg-brand-turquoise/[0.02]" : "text-slate-300 dark:text-slate-700 opacity-30"
                       )}>
-                        {h}
+                        {customHeaders[i]}
                       </th>
                     ))}
                   </tr>
@@ -149,8 +205,8 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
                     <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                       {row.map((cell, ci) => (
                         <td key={ci} className={cn(
-                          "px-6 py-4 text-xs font-medium transition-opacity duration-300",
-                          selectedIndices.includes(ci) ? "text-slate-600 dark:text-slate-400" : "text-slate-300 dark:text-slate-700 opacity-20"
+                          "px-6 py-4 text-xs font-medium transition-all",
+                          selectedIndices.includes(ci) ? "text-slate-600 dark:text-slate-300" : "text-slate-300 dark:text-slate-700 opacity-20"
                         )}>
                           {cell || '-'}
                         </td>
@@ -161,9 +217,14 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
               </table>
             </div>
             
-            <div className="mt-4 flex items-center gap-2 text-slate-400">
-              <AlertCircle size={14} />
-              <span className="text-[10px] font-bold uppercase">Mostrando las primeras 5 filas de un total de {rows.length} registros detectados.</span>
+            <div className="mt-4 flex items-center justify-between text-slate-400">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={14} />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">Mostrando las primeras 5 filas para validación de esquema.</span>
+              </div>
+              <div className="text-[10px] font-black text-brand-turquoise bg-brand-turquoise/10 px-3 py-1 rounded-full uppercase tracking-widest">
+                Total Registros: {rows.length.toLocaleString()}
+              </div>
             </div>
           </div>
         </div>

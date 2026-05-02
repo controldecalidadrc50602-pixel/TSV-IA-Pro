@@ -149,9 +149,9 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
   ];
 
   const views = [
-    { id: 'tipificaciones', label: 'Tipificaciones' },
-    { id: 'canales', label: 'Canales' },
-    { id: 'colas', label: 'Colas' },
+    { id: 'tipificaciones', label: stats.detectedSchema?.categorical[1] || 'Tipificaciones' },
+    { id: 'canales', label: stats.detectedSchema?.categorical[0] || 'Canales' },
+    { id: 'colas', label: stats.detectedSchema?.categorical[2] || 'Colas' },
     { id: 'horas', label: 'Por Hora' },
   ] as const;
 

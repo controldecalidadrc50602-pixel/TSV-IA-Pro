@@ -230,7 +230,9 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
             "bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col",
             show('hourly') ? "col-span-12 lg:col-span-4 h-[360px]" : "col-span-12 lg:col-span-6 h-[320px]"
           )}>
-            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">Mix de Canales</h3>
+            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">
+              Mix de {stats.detectedSchema?.categorical[0] || 'Canales'}
+            </h3>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Preferencia de contacto</p>
             <div className="flex-1 flex flex-col justify-center items-center">
               <div className="h-[180px] w-full relative">
@@ -269,7 +271,9 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
             "bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[280px]",
             show('colas') ? "col-span-12 lg:col-span-6" : "col-span-12"
           )}>
-            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">Tipificaciones Críticas</h3>
+            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">
+              {stats.detectedSchema?.categorical[1] || 'Tipificaciones'} Críticas
+            </h3>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Distribución por categoría de atención</p>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
@@ -292,7 +296,9 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
             "bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[280px]",
             show('tipificaciones') ? "col-span-12 lg:col-span-6" : "col-span-12"
           )}>
-            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">Flujo por Cola</h3>
+            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">
+              Flujo por {stats.detectedSchema?.categorical[2] || 'Cola'}
+            </h3>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Departamentos con mayor volumen</p>
             <div className="flex-1 flex items-center min-h-0">
               <div className="w-1/2 h-full">
@@ -333,11 +339,11 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
               <div className="text-center lg:text-left border-l border-white/10 pl-5">
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Top Tipificación</p>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Top {stats.detectedSchema?.categorical[1] || 'Tipificación'}</p>
                 <p className="text-sm font-black text-white truncate max-w-[120px]">{stats.statsByTipificacion?.[0]?.category || '-'}</p>
               </div>
               <div className="text-center lg:text-left border-l border-white/10 pl-5">
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Cola Principal</p>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">{stats.detectedSchema?.categorical[2] || 'Cola'} Principal</p>
                 <p className="text-sm font-black text-white truncate max-w-[120px]">{stats.statsByCola?.[0]?.cola || '-'}</p>
               </div>
               <div className="text-center lg:text-left border-l border-white/10 pl-5">

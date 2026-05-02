@@ -361,13 +361,18 @@ export default function App() {
     setActiveTab(targetTab);
   };
 
-  const generateAISlides = async (): Promise<any[]> => {
+  const generateAISlides = async (config?: any): Promise<any[]> => {
     if (!data) return [];
     try {
-      const response = await fetch('/api/slides', {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/api/slides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stats: data.stats, summary: data.summary })
+        body: JSON.stringify({ 
+          stats: data.stats, 
+          summary: data.summary,
+          config 
+        })
       });
       if (!response.ok) throw new Error('Slides API error');
       const result = await response.json();

@@ -127,7 +127,8 @@ ESTRUCTURA REQUERIDA:
 
 Genera entre 3 y 5 findings. Sé específico con los números del dataset.`;
 
-        const userMessage = `RESUMEN DEL DATASET:\n${summary}\n\nESTADÍSTICAS CLAVE:\nSLA: ${stats?.slaCompliance?.toFixed(1)}%\nAHT: ${stats?.avgDuration}\nBot Success: ${stats?.botSuccessRate?.toFixed(1)}%\nEficiencia: ${stats?.efficiencyIndex?.toFixed(1)}%\nSesiones: ${stats?.totalSessions}\nHora Pico: ${stats?.peakHour?.hour}:00\nTop Canal: ${stats?.sessionsByChannel?.[0]?.channel}`;
+        const cat0 = stats?.detectedSchema?.categorical[0] || 'Canal';
+        const userMessage = `RESUMEN DEL DATASET:\n${summary}\n\nESTADÍSTICAS CLAVE:\nSLA: ${stats?.slaCompliance?.toFixed(1)}%\nAHT: ${stats?.avgDuration}\nBot Success: ${stats?.botSuccessRate?.toFixed(1)}%\nEficiencia: ${stats?.efficiencyIndex?.toFixed(1)}%\nSesiones: ${stats?.totalSessions}\nHora Pico: ${stats?.peakHour?.hour}:00\nTop ${cat0}: ${stats?.sessionsByChannel?.[0]?.channel}`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.0-flash",
@@ -200,6 +201,10 @@ ${narrativeList}
 
 IMPORTANTE: Usa EXCLUSIVAMENTE los datos reales proporcionados. Genera EXACTAMENTE ${slideCount} slides.`;
 
+        const cat0 = stats.detectedSchema?.categorical[0] || 'Canales';
+        const cat1 = stats.detectedSchema?.categorical[1] || 'Tipificaciones';
+        const cat2 = stats.detectedSchema?.categorical[2] || 'Colas';
+
         const userMessage = `DATOS REALES DEL PERÍODO:
 - Período: ${stats.dateRange}
 - Total Sesiones: ${stats.totalSessions}
@@ -211,13 +216,13 @@ IMPORTANTE: Usa EXCLUSIVAMENTE los datos reales proporcionados. Genera EXACTAMEN
 - Transfer Rate: ${((stats.totalTransfers / stats.totalSessions) * 100).toFixed(1)}%
 - Total Respuestas: ${stats.totalResponses}
 
-CANALES (Top 5):
+${cat0.toUpperCase()} (Top 5):
 ${stats.sessionsByChannel?.slice(0, 5).map(c => `  - ${c.channel}: ${c.count} sesiones (${((c.count/stats.totalSessions)*100).toFixed(1)}%)`).join('\n')}
 
-TIPIFICACIONES CRÍTICAS (Top 5):
+${cat1.toUpperCase()} CRÍTICAS (Top 5):
 ${stats.statsByTipificacion?.slice(0, 5).map(t => `  - ${t.category}: ${t.count} casos`).join('\n')}
 
-COLAS DE ATENCIÓN:
+${cat2.toUpperCase()} DE ATENCIÓN:
 ${stats.statsByCola?.slice(0, 4).map(q => `  - ${q.cola}: ${q.count} sesiones`).join('\n')}
 
 ESTADOS:
