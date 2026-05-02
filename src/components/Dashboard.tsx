@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
 import { DataStats } from '@/lib/data-processor';
-import { Users, Clock, TrendingUp, Hash, Sparkles, Share2, Globe, LayoutDashboard, AlertCircle } from 'lucide-react';
+import { Users, Clock, TrendingUp, TrendingDown, Hash, Sparkles, Share2, Globe, LayoutDashboard, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
