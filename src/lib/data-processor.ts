@@ -375,3 +375,78 @@ Estadísticas de Rendimiento:
 - Respuestas Generadas: ${stats.totalResponses}
   `.trim();
 }
+
+/**
+ * Generates a simple forecast based on linear regression of historical session counts
+ */
+function generateForecast(sessionsByHour: { hour: string; count: number }[]) {
+  const data = sessionsByHour.map((s, i) => ({ x: i, y: s.count }));
+  if (data.length < 2) return [];
+
+  const n = data.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  data.forEach(p => {
+    sumX += p.x;
+    sumY += p.y;
+    sumXY += p.x * p.y;
+    sumXX += p.x * p.x;
+  });
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+
+  // Forecast next 6 hours
+  const lastHourStr = sessionsByHour[sessionsByHour.length - 1]?.hour || "0";
+  const lastHour = parseInt(lastHourStr);
+  
+  return Array.from({ length: 6 }).map((_, i) => {
+    const nextIdx = n + i;
+    const nextHour = (lastHour + i + 1) % 24;
+    return {
+      hour: String(nextHour).padStart(2, '0'),
+      count: Math.max(0, Math.round(slope * nextIdx + intercept))
+    };
+  });
+}
+
+/**
+ * Identifies correlations between anomalies and categorical values
+ */
+function analyzeRootCauses(anomalies: any[], rows: string[][], categoricalProfiles: any[], headers: string[]) {
+  if (!anomalies || !anomalies.length || !categoricalProfiles.length) return {};
+  
+  const causeAnalysis: Record<string, string> = {};
+  const anomalyByCol = new Map<string, number[]>();
+  
+  anomalies.forEach(a => {
+    if (!anomalyByCol.has(a.column)) anomalyByCol.set(a.column, []);
+    anomalyByCol.get(a.column)!.push(a.row_index);
+  });
+
+  anomalyByCol.forEach((rowIndices, colName) => {
+    // For each column with anomalies, find which category value is most common in those rows
+    categoricalProfiles.forEach(prof => {
+      const counts = new Map<string, number>();
+      rowIndices.forEach(idx => {
+        const val = rows[idx]?.[prof.index];
+        if (val) counts.set(val, (counts.get(val) || 0) + 1);
+      });
+
+      // Find the winner
+      let winner = '';
+      let maxCount = 0;
+      counts.forEach((count, val) => {
+        if (count > maxCount) {
+          maxCount = count;
+          winner = val;
+        }
+      });
+
+      if (winner && maxCount > rowIndices.length * 0.3) { // Reduced threshold to 30% for better detection
+        causeAnalysis[colName] = `${headers[prof.index]}: ${winner}`;
+      }
+    });
+  });
+
+  return causeAnalysis;
+}
