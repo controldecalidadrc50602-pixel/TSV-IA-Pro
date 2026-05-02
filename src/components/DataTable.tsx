@@ -23,7 +23,10 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
 
   // Identify Link Column (case insensitive check for 'link')
   const linkColIndex = useMemo(() => {
-    return headers.findIndex(h => h.toLowerCase().includes('link') || h.toLowerCase().includes('url'));
+    return headers.findIndex(h => {
+      const sh = String(h || '').toLowerCase();
+      return sh.includes('link') || sh.includes('url');
+    });
   }, [headers]);
 
   // Filter data

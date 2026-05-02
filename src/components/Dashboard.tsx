@@ -61,7 +61,7 @@ const ALL_WIDGETS = ['kpis', 'secundary', 'hourly', 'channels', 'tipificaciones'
 
 export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, onFilter, currentFilter }: DashboardProps) {
   const visible = activeWidgets ?? ALL_WIDGETS;
-  const show = (w: string) => visible.includes(w);
+  const show = (w: string) => Array.isArray(visible) && visible.includes(w);
 
   const chartData = React.useMemo(() => {
     const historical = stats.sessionsByHour || [];
@@ -192,7 +192,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
               <span className="text-2xl font-black text-slate-800 dark:text-white">
-                {stats.statsByStatus?.find(s => s.status.toLowerCase().includes('curso'))?.count || 0}
+                {stats.statsByStatus?.find(s => String(s.status || '').toLowerCase().includes('curso'))?.count || 0}
               </span>
             </div>
           </div>
@@ -216,7 +216,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             </div>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.sessionsByHour}>
+                <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2DD4BF" stopOpacity={0.3} />
@@ -234,8 +234,20 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                     strokeWidth={3} 
                     fillOpacity={1} 
                     fill="url(#colorCount)" 
-                    name="Volumen" 
-                    strokeDasharray={(d: any) => d.payload?.type === 'forecast' ? '5 5' : '0'}
+                    name="Volumen Histórico"
+                    connectNulls
+                    data={chartData.filter(d => d.type === 'historical' || d === chartData.find(x => x.type === 'historical' && chartData[chartData.indexOf(x)+1]?.type === 'forecast'))}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="#0D9488" 
+                    strokeWidth={3} 
+                    strokeDasharray="5 5"
+                    fill="transparent"
+                    name="Proyección AI"
+                    connectNulls
+                    data={chartData.filter(d => d.type === 'forecast' || d === chartData.filter(x => x.type === 'historical').pop())}
                   />
                 </AreaChart>
               </ResponsiveContainer>

@@ -31,6 +31,7 @@ export interface DataStats {
   anomalies?: { column: string; row_index: number; value: number; severity: 'high' | 'medium' }[];
   forecast?: { hour: string; count: number }[];
   rootCauseAnalysis?: Record<string, string>;
+  statsByStatus?: { status: string; count: number }[];
   detectedSchema: {
     categorical: string[];
     numeric: string[];
@@ -72,41 +73,43 @@ export function formatDuration(seconds: number): string {
 const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export function processData(headersRaw: string[], rows: string[][]): { processedRows: ProcessedRow[], stats: DataStats, formattedHeaders: string[] } {
-  const headers = headersRaw.map(h => h.trim());
+  const headers = headersRaw.map(h => String(h || '').replace(/\n/g, ' ').trim());
   const processedRows: ProcessedRow[] = [];
   
   // 1. Schema Discovery Phase
-  const columnProfiles = headers.map((header, idx) => {
-    const sampleValues = rows.slice(0, 50).map(r => r[idx]).filter(v => v && v !== '-');
+  const columnProfiles = headers.map((header, index) => {
+    const normHeader = normalize(header);
+    const sampleValues = rows.slice(0, 50).map(r => String(r[index] || '')).filter(v => v && v !== '-');
     const uniqueValues = new Set(sampleValues);
     
     // Check for Date
-    const isDate = sampleValues.every(v => isValid(new Date(v)) && v.includes('/') || v.includes('-'));
+    const isDate = sampleValues.length > 0 && sampleValues.every(v => isValid(new Date(v)) && (v.includes('/') || v.includes('-')));
+    
     // Check for Numeric
     const isNumeric = sampleValues.length > 0 && sampleValues.every(v => {
-        const n = v.replace(/[,%]/g, '');
+        const n = v.replace(/[,%$]/g, '');
         return !isNaN(parseFloat(n)) && isFinite(Number(n));
-    });
+    }) && !sampleValues.every(v => v.includes(':'));
     
-    // Check for ID-like column (numbers that shouldn't be averaged)
+    // Check for ID-like column
     const looksLikeId = isNumeric && (
-        normalize(header).includes('id') || 
-        normalize(header).includes('num') || 
-        normalize(header).includes('folio') || 
-        normalize(header).includes('contacto') ||
-        normalize(header).includes('sesion') ||
-        sampleValues.some(v => v.length > 10) // Large numbers are usually IDs
+        normHeader.includes('id') || 
+        normHeader.includes('num') || 
+        normHeader.includes('folio') || 
+        normHeader.includes('contacto') ||
+        normHeader.includes('sesion') ||
+        sampleValues.some(v => v.length > 10)
     );
     
     // Check for Time (HH:mm)
-    const isTime = sampleValues.every(v => v.includes(':') && v.split(':').length >= 2);
+    const isTime = sampleValues.length > 0 && sampleValues.every(v => v.includes(':') && v.split(':').length >= 2);
     
     return {
-      index: idx,
+      index,
       header,
-      normHeader: normalize(header),
+      normHeader,
       isDate,
-      isNumeric: isNumeric && !looksLikeId, // Exclude IDs from numeric processing
+      isNumeric: isNumeric && !looksLikeId,
       isTime,
       uniqueCount: uniqueValues.size,
       categoryScore: uniqueValues.size > 0 && uniqueValues.size < 25 ? (1 - (uniqueValues.size / Math.max(1, sampleValues.length))) : 0
@@ -123,13 +126,13 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
 
   const numericProfiles = columnProfiles.filter(p => p.isNumeric && !p.isDate && !p.isTime);
   
-  // Identify duration columns specifically (AHT, Duration, Talking Time)
+  // Identify duration columns specifically
   const durationIdx = columnProfiles.find(p => 
     p.normHeader.includes('duracion') || 
     p.normHeader.includes('duration') || 
     p.normHeader.includes('aht') || 
     p.normHeader.includes('talking') ||
-    p.normHeader.includes('tiempo_hablado')
+    p.normHeader.includes('tiempo')
   )?.index ?? -1;
 
   // Stats aggregators
@@ -240,10 +243,30 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     }
   });
 
-  // Metrics (Schema-Agnostic approximations)
-  const slaIdx = columnProfiles.find(p => p.normHeader.includes('sla') || p.normHeader.includes('cumplimiento'))?.index ?? -1;
-  const slaCompliance = slaIdx !== -1 ? (numericStats[headers[slaIdx]]?.mean || 0) : 0; 
-  
+  // ─── Status & Specific Metric Extraction ──────────────────────────────────
+  const statusIdx = columnProfiles.find(p => p.normHeader.includes('estado') || p.normHeader.includes('status'))?.index ?? -1;
+  const inProgressIdx = columnProfiles.find(p => p.normHeader.includes('en curso') || p.normHeader.includes('progreso'))?.index ?? -1;
+  const closedIdx = columnProfiles.find(p => p.normHeader.includes('cerrada') || p.normHeader.includes('finalizada'))?.index ?? -1;
+
+  const statsByStatus: { status: string; count: number }[] = [];
+  if (statusIdx !== -1) {
+    const statusMap = categoricalMaps[categoricalProfiles.findIndex(p => p.index === statusIdx)];
+    if (statusMap) {
+      statusMap.forEach((count, status) => statsByStatus.push({ status, count }));
+    }
+  } else if (inProgressIdx !== -1 || closedIdx !== -1) {
+    // If separate columns for In Progress / Closed (Numeric columns usually)
+    if (inProgressIdx !== -1) {
+      const sum = numericStats[headers[inProgressIdx]]?.sum || 0;
+      statsByStatus.push({ status: 'En curso', count: sum });
+    }
+    if (closedIdx !== -1) {
+      const sum = numericStats[headers[closedIdx]]?.sum || 0;
+      statsByStatus.push({ status: 'Cerradas', count: sum });
+    }
+  }
+
+  // Final Bot Rate logic
   const botIdx = columnProfiles.find(p => p.normHeader.includes('bot') || p.normHeader.includes('autoconsulta'))?.index ?? -1;
   const botSuccessRate = botIdx !== -1 ? (numericStats[headers[botIdx]]?.mean || 0) : 0;
 
@@ -307,6 +330,10 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     return newRow;
   });
 
+  // Metrics
+  const slaIdx = columnProfiles.find(p => p.normHeader.includes('sla') || p.normHeader.includes('cumplimiento'))?.index ?? -1;
+  const slaCompliance = slaIdx !== -1 ? (numericStats[headers[slaIdx]]?.mean || 0) : 0;
+
   return {
     processedRows,
     stats: {
@@ -323,6 +350,7 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       totalTransfers,
       totalResponses,
       anomalies,
+      statsByStatus,
       forecast: generateForecast(sessionsByHour),
       rootCauseAnalysis: analyzeRootCauses(anomalies, rows, categoricalProfiles, headers),
       peakHour: sessionsByHour.reduce((p, c) => (p.count > c.count) ? p : c, sessionsByHour[0]),
