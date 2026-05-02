@@ -6,9 +6,10 @@ import { DataStats } from './data-processor';
 const DB_NAME = 'tsv-viewer-db';
 const STORE_NAME = 'files';
 const SHARE_STORE = 'shares';
+const SCHEMA_STORE = 'schemas';
 
 async function initLocalDB() {
-  return openDB(DB_NAME, 2, {
+  return openDB(DB_NAME, 3, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -17,8 +18,21 @@ async function initLocalDB() {
       if (oldVersion < 2) {
         db.createObjectStore(SHARE_STORE, { keyPath: 'id' });
       }
+      if (oldVersion < 3) {
+        db.createObjectStore(SCHEMA_STORE, { keyPath: 'hash' });
+      }
     },
   });
+}
+
+export async function saveSchemaMapping(hash: string, mapping: Record<string, string>) {
+  const db = await initLocalDB();
+  await db.put(SCHEMA_STORE, { hash, mapping, lastUsed: new Date() });
+}
+
+export async function getSchemaMapping(hash: string) {
+  const db = await initLocalDB();
+  return db.get(SCHEMA_STORE, hash);
 }
 
 export async function saveFile(name: string, headers: string[], data: any[][], projectId?: string) {

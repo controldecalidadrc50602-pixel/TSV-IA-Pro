@@ -13,6 +13,8 @@ interface DashboardProps {
   insights?: string;
   isPublic?: boolean;
   onShare?: () => void;
+  onFilter?: (column: string, value: string) => void;
+  currentFilter?: { column: string; value: string } | null;
   activeWidgets?: string[];
 }
 
@@ -57,9 +59,18 @@ const KpiCard = ({ icon: Icon, label, value, color, delay, trend, status }: any)
 
 const ALL_WIDGETS = ['kpis', 'secundary', 'hourly', 'channels', 'tipificaciones', 'colas', 'mandos'];
 
-export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }: DashboardProps) {
+export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, onFilter, currentFilter }: DashboardProps) {
   const visible = activeWidgets ?? ALL_WIDGETS;
   const show = (w: string) => visible.includes(w);
+
+  const chartData = React.useMemo(() => {
+    const historical = stats.sessionsByHour || [];
+    const forecast = stats.forecast || [];
+    return [
+      ...historical.map(d => ({ ...d, type: 'historical' })),
+      ...forecast.map(d => ({ ...d, type: 'forecast' }))
+    ];
+  }, [stats]);
 
   return (
     <div className="space-y-8 pb-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
@@ -188,20 +199,19 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
         </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-12 gap-4">
-
-        {/* Carga Horaria */}
-        {show('hourly') && (
-          <div className="col-span-12 lg:col-span-8 bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[320px]">
-            <div className="flex items-center justify-between mb-4">
+      {/* Charts Grid - Fully Dynamic */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Carga Horaria (Si existe) */}
+        {show('hourly') && stats.sessionsByHour.some(h => h.count > 0) && (
+          <div className="col-span-12 lg:col-span-8 bg-white dark:bg-dark-card p-6 rounded-[2.5rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px]">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-base font-black text-slate-800 dark:text-white">Carga Operativa por Hora</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500">Distribución de sesiones en el ciclo de 24h</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Carga Operativa Temporal</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500">Distribución de demanda por franja horaria</p>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-brand-turquoise" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Volumen</span>
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-4 py-2 rounded-xl">
+                 <Clock size={16} className="text-brand-turquoise" />
+                 <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Hora Pico: {stats.peakHour?.hour}:00</span>
               </div>
             </div>
             <div className="flex-1 min-h-0">
@@ -216,147 +226,131 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets }:
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                   <XAxis dataKey="hour" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} dy={8} />
                   <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', fontSize: '12px', fontWeight: 'bold' }} />
-                  <Area type="monotone" dataKey="count" stroke="#0D9488" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCount)" name="Sesiones" />
+                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="#0D9488" 
+                    strokeWidth={3} 
+                    fillOpacity={1} 
+                    fill="url(#colorCount)" 
+                    name="Volumen" 
+                    strokeDasharray={(d: any) => d.payload?.type === 'forecast' ? '5 5' : '0'}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
         )}
 
-        {/* Mix de Canales */}
-        {show('channels') && (
-          <div className={cn(
-            "bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col",
-            show('hourly') ? "col-span-12 lg:col-span-4 h-[360px]" : "col-span-12 lg:col-span-6 h-[320px]"
-          )}>
-            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">
-              Mix de {stats.detectedSchema?.categorical[0] || 'Canales'}
-            </h3>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Preferencia de contacto</p>
-            <div className="flex-1 flex flex-col justify-center items-center">
-              <div className="h-[180px] w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={stats.sessionsByChannel} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
-                      paddingAngle={6} dataKey="count" nameKey="channel">
-                      {stats.sessionsByChannel.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-black text-slate-800 dark:text-white">{stats.totalSessions}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
-                </div>
-              </div>
-              <div className="w-full mt-3 space-y-1.5">
-                {stats.sessionsByChannel.slice(0, 5).map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs px-2 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="font-bold text-slate-600 dark:text-slate-400 truncate max-w-[160px]" title={item.channel}>{item.channel}</span>
-                    </div>
-                    <span className="font-black text-slate-900 dark:text-white ml-2">{Math.round((item.count / stats.totalSessions) * 100)}%</span>
-                  </div>
-                ))}
+        {/* Dynamic Categorical Widgets */}
+        {stats.allCategoricalStats.map((cat, idx) => (
+          <div 
+            key={cat.header}
+            className={cn(
+              "bg-white dark:bg-dark-card p-6 rounded-[2.5rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px]",
+              idx === 0 && show('hourly') ? "col-span-12 lg:col-span-4" : "col-span-12 lg:col-span-6"
+            )}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white truncate" title={cat.header}>
+                Mix de {cat.header}
+                {currentFilter?.column === cat.header && (
+                  <button 
+                    onClick={() => onFilter?.(cat.header, currentFilter.value)}
+                    className="text-[8px] font-black bg-brand-turquoise text-white px-2 py-0.5 rounded-full animate-pulse ml-2"
+                  >
+                    Filtrado: {currentFilter.value} (X)
+                  </button>
+                )}
+              </h3>
+              <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                {idx === 0 ? <Globe size={16} /> : idx === 1 ? <Sparkles size={16} /> : <Share2 size={16} />}
               </div>
             </div>
-          </div>
-        )}
+            <p className="text-xs text-slate-400 mb-6">Distribución de impacto por {cat.header.toLowerCase()}</p>
+            
+            <div className="flex-1 flex flex-col min-h-0">
+               {idx === 0 ? (
+                 <div className="flex-1 relative flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={cat.data.slice(0, 8)} 
+                          cx="50%" cy="50%" 
+                          innerRadius={60} outerRadius={90}
+                          paddingAngle={5} dataKey="count" nameKey="label"
+                          onClick={(data) => onFilter?.(cat.header, data.label)}
+                          className="cursor-pointer outline-none"
+                        >
+                          {cat.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute flex flex-col items-center pointer-events-none">
+                       <span className="text-3xl font-black text-slate-900 dark:text-white">{cat.data.length}</span>
+                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Items</span>
+                    </div>
+                 </div>
+               ) : (
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart layout="vertical" data={cat.data.slice(0, 6)}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="label" type="category" width={100} fontSize={9} fontWeight={700}
+                        tick={{ fill: '#64748B' }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }} />
+                      <Bar dataKey="count" fill={COLORS[idx % COLORS.length]} radius={[0, 8, 8, 0]} barSize={20}>
+                        {cat.data.slice(0, 6).map((_, i) => <Cell key={i} fillOpacity={1 - (i * 0.1)} />)}
+                      </Bar>
+                    </BarChart>
+                 </ResponsiveContainer>
+               )}
+            </div>
 
-        {/* Tipificaciones */}
-        {show('tipificaciones') && (
-          <div className={cn(
-            "bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[280px]",
-            show('colas') ? "col-span-12 lg:col-span-6" : "col-span-12"
-          )}>
-            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">
-              {stats.detectedSchema?.categorical[1] || 'Tipificaciones'} Críticas
-            </h3>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Distribución por categoría de atención</p>
-            <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart layout="vertical" data={stats.statsByTipificacion?.slice(0, 6)}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="category" type="category" width={115} fontSize={9} fontWeight={700}
-                    tick={{ fill: '#64748B' }} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="count" fill="#2DD4BF" radius={[0, 4, 4, 0]} barSize={16} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800 grid grid-cols-2 gap-2">
+               <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Top Valor</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-white truncate">{cat.data[0]?.label || '-'}</p>
+               </div>
+               <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Dominancia</p>
+                  <p className="text-xs font-black text-brand-turquoise">
+                    {stats.totalSessions > 0 ? Math.round((cat.data[0]?.count / stats.totalSessions) * 100) : 0}%
+                  </p>
+               </div>
             </div>
           </div>
-        )}
+        ))}
 
-        {/* Colas */}
-        {show('colas') && (
-          <div className={cn(
-            "bg-white dark:bg-dark-card p-5 rounded-2xl border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[280px]",
-            show('tipificaciones') ? "col-span-12 lg:col-span-6" : "col-span-12"
-          )}>
-            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">
-              Flujo por {stats.detectedSchema?.categorical[2] || 'Cola'}
-            </h3>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Departamentos con mayor volumen</p>
-            <div className="flex-1 flex items-center min-h-0">
-              <div className="w-1/2 h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={stats.statsByCola?.slice(0, 5)} cx="50%" cy="50%"
-                      innerRadius={35} outerRadius={58} paddingAngle={4} dataKey="count" nameKey="cola">
-                      {stats.statsByCola?.slice(0, 5).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="w-1/2 space-y-2.5 pl-2">
-                {stats.statsByCola?.slice(0, 4).map((item, i) => (
-                  <div key={i} className="flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300 truncate tracking-tighter uppercase">{item.cola}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1 ml-3.5">
-                      <span className="text-sm font-black text-slate-900 dark:text-white">{item.count}</span>
-                      <span className="text-[8px] text-slate-400 font-bold">SESIONES</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Control de Mandos */}
+        {/* Control de Mandos Operativo */}
         {show('mandos') && (
-          <div className="col-span-12 bg-slate-900 p-5 rounded-2xl shadow-xl shadow-brand-dark/20 flex flex-col lg:flex-row items-center gap-5">
-            <div className="flex-1 text-center lg:text-left">
-              <h3 className="text-base font-black text-white mb-1">Control de Mandos Operativo</h3>
-              <p className="text-teal-400/70 text-xs">Resumen táctico de tipificaciones y flujos de red</p>
+          <div className="col-span-12 bg-slate-950 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-center gap-8">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-brand-turquoise/10 rounded-full blur-[80px]" />
+            <div className="flex-1 text-center lg:text-left relative z-10">
+              <div className="flex items-center gap-2 mb-2 justify-center lg:justify-start">
+                 <div className="w-2 h-2 rounded-full bg-brand-turquoise animate-pulse" />
+                 <span className="text-[10px] font-black text-brand-turquoise uppercase tracking-[0.3em]">Tactical Command</span>
+              </div>
+              <h3 className="text-2xl font-black text-white mb-2 italic">Resumen Operativo Estratégico</h3>
+              <p className="text-slate-400 text-sm max-w-md">Consolidado dinámico de las métricas de rendimiento y flujo de red detectadas.</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-              <div className="text-center lg:text-left border-l border-white/10 pl-5">
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Top {stats.detectedSchema?.categorical[1] || 'Tipificación'}</p>
-                <p className="text-sm font-black text-white truncate max-w-[120px]">{stats.statsByTipificacion?.[0]?.category || '-'}</p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 relative z-10 w-full lg:w-auto">
+              {stats.allCategoricalStats.slice(0, 2).map((cat, i) => (
+                <div key={i} className="text-center lg:text-left border-l border-white/10 pl-6">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Top {cat.header}</p>
+                  <p className="text-sm font-black text-white truncate max-w-[120px]" title={cat.data[0]?.label}>{cat.data[0]?.label || '-'}</p>
+                </div>
+              ))}
+              <div className="text-center lg:text-left border-l border-white/10 pl-6">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Volumen Total</p>
+                <p className="text-xl font-black text-brand-turquoise">{stats.totalSessions.toLocaleString()}</p>
               </div>
-              <div className="text-center lg:text-left border-l border-white/10 pl-5">
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">{stats.detectedSchema?.categorical[2] || 'Cola'} Principal</p>
-                <p className="text-sm font-black text-white truncate max-w-[120px]">{stats.statsByCola?.[0]?.cola || '-'}</p>
-              </div>
-              <div className="text-center lg:text-left border-l border-white/10 pl-5">
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Transfer Rate</p>
-                <p className="text-base font-black text-white">
-                  {stats.totalSessions > 0 ? ((stats.totalTransfers / stats.totalSessions) * 100).toFixed(1) : 0}%
-                </p>
-              </div>
-              <div className="text-center lg:text-left border-l border-white/10 pl-5">
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Estado: Cerradas</p>
-                <p className="text-base font-black text-white">
-                  {stats.statsByStatus?.find(s => s.status.toLowerCase().includes('cerrada'))?.count || 0}
-                </p>
+              <div className="text-center lg:text-left border-l border-white/10 pl-6">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Rendimiento</p>
+                <p className="text-xl font-black text-white">{(stats.efficiencyIndex || 0).toFixed(1)}%</p>
               </div>
             </div>
           </div>

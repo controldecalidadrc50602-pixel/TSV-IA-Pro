@@ -6,6 +6,7 @@ import {
   AlertCircle, ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getSchemaMapping, saveSchemaMapping } from '@/lib/storage';
 
 interface DataSelectorProps {
   headers: string[];
@@ -14,12 +15,49 @@ interface DataSelectorProps {
   onCancel: () => void;
 }
 
+const generateHeaderHash = (headers: string[]) => {
+  const s = headers.join('|');
+  let hash = 5381;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 33) ^ s.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
+};
+
 export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelectorProps) {
   const [selectedIndices, setSelectedIndices] = useState<number[]>(
     headers.map((_, i) => i) // Default all selected
   );
   const [customHeaders, setCustomHeaders] = useState<string[]>(headers);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [hasLoadedSaved, setHasLoadedSaved] = useState(false);
+
+  const headerHash = React.useMemo(() => generateHeaderHash(headers), [headers]);
+
+  React.useEffect(() => {
+    const loadMapping = async () => {
+      const saved = await getSchemaMapping(headerHash);
+      if (saved && saved.mapping) {
+        const updated = [...headers];
+        const newSelected: number[] = [];
+        
+        headers.forEach((h, i) => {
+          if (saved.mapping[h]) {
+            updated[i] = saved.mapping[h].name;
+            if (saved.mapping[h].selected) newSelected.push(i);
+          } else {
+            // If not in mapping, default to selected if it was all selected
+            newSelected.push(i);
+          }
+        });
+        
+        setCustomHeaders(updated);
+        if (newSelected.length > 0) setSelectedIndices(newSelected);
+        setHasLoadedSaved(true);
+      }
+    };
+    loadMapping();
+  }, [headerHash, headers]);
 
   const previewRows = rows.slice(0, 5);
 
@@ -41,9 +79,20 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
            h.includes('untitled') || h.length < 3 || /^\d+$/.test(h);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const finalHeaders = customHeaders.filter((_, i) => selectedIndices.includes(i));
     const filteredRows = rows.map(row => row.filter((_, i) => selectedIndices.includes(i)));
+    
+    // Save mapping for next time
+    const mapping: Record<string, { name: string, selected: boolean }> = {};
+    headers.forEach((h, i) => {
+      mapping[h] = {
+        name: customHeaders[i],
+        selected: selectedIndices.includes(i)
+      };
+    });
+    
+    await saveSchemaMapping(headerHash, mapping);
     onConfirm(finalHeaders, filteredRows);
   };
 
@@ -74,6 +123,16 @@ export function DataSelector({ headers, rows, onConfirm, onCancel }: DataSelecto
               Curaduría de <span className="text-brand-turquoise">Métricas</span>
             </h2>
             <p className="text-sm text-slate-500 mt-1">Selecciona y renombra las columnas que deseas integrar en el análisis.</p>
+            {hasLoadedSaved && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }} 
+                animate={{ opacity: 1, x: 0 }}
+                className="mt-2 flex items-center gap-2 text-brand-turquoise"
+              >
+                <div className="w-2 h-2 rounded-full bg-brand-turquoise animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Esquema Recordado Automáticamente</span>
+              </motion.div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">

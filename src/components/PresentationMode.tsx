@@ -62,15 +62,14 @@ const tooltipStyle = {
 function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
   const schema = stats.detectedSchema;
   
-  if (type === 'channels' && stats.sessionsByChannel?.length > 0) {
-    const data = stats.sessionsByChannel.slice(0, 6);
-    const label = schema?.categorical[0] || 'Categoría Principal';
+  if (type === 'channels' && stats.allCategoricalStats[0]?.data.length > 0) {
+    const data = stats.allCategoricalStats[0].data.slice(0, 6);
     return (
       <div className="h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
-              paddingAngle={4} dataKey="count" nameKey="channel">
+              paddingAngle={4} dataKey="count" nameKey="label">
               {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Pie>
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
@@ -81,16 +80,16 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     );
   }
 
-  if ((type === 'tipification' || type === 'action') && stats.statsByTipificacion?.length > 0) {
-    const data = stats.statsByTipificacion.slice(0, 6);
-    const label = schema?.categorical[1] || 'Sub-categoría';
+  if ((type === 'tipification' || type === 'action') && stats.allCategoricalStats[1]?.data.length > 0) {
+    const data = stats.allCategoricalStats[1].data.slice(0, 6);
+    const label = stats.allCategoricalStats[1].header;
     return (
       <div className="h-[220px] w-full">
         <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-widest">{label}</div>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical">
             <XAxis type="number" hide />
-            <YAxis dataKey="category" type="category" width={110} fontSize={9} fontWeight={700}
+            <YAxis dataKey="label" type="category" width={110} fontSize={9} fontWeight={700}
               tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
             <Bar dataKey="count" fill="#2DD4BF" radius={[0, 6, 6, 0]} barSize={18} />
@@ -100,16 +99,16 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     );
   }
   
-  if (type === 'colas' && stats.statsByCola?.length > 0) {
-      const data = stats.statsByCola.slice(0, 6);
-      const label = schema?.categorical[2] || 'Tercera Categoría';
+  if (type === 'colas' && stats.allCategoricalStats[2]?.data.length > 0) {
+      const data = stats.allCategoricalStats[2].data.slice(0, 6);
+      const label = stats.allCategoricalStats[2].header;
       return (
         <div className="h-[220px] w-full">
           <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-widest">{label}</div>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical">
               <XAxis type="number" hide />
-              <YAxis dataKey="cola" type="category" width={110} fontSize={9} fontWeight={700}
+              <YAxis dataKey="label" type="category" width={110} fontSize={9} fontWeight={700}
                 tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
               <Bar dataKey="count" fill="#6366F1" radius={[0, 6, 6, 0]} barSize={18} />

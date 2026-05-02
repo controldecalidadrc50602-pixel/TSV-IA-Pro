@@ -10,8 +10,15 @@ export interface DataStats {
   uniqueUsers: number;
   dateRange: string;
   sessionsByHour: { hour: string; count: number }[];
-  sessionsByChannel: { channel: string; count: number }[];
-  numericStats: Record<string, { min: number; max: number; mean: number; sum: number; cv: number }>;
+  allCategoricalStats: { header: string; data: { label: string; count: number }[] }[];
+  numericStats: Record<string, { 
+    min: number; 
+    max: number; 
+    mean: number; 
+    sum: number; 
+    cv: number;
+    anomalies: { rowIdx: number; value: number; severity: 'high' | 'medium' }[];
+  }>;
   columnTotals: Record<string, number | string>;
   avgDuration?: string;
   totalDuration?: string;
@@ -19,14 +26,12 @@ export interface DataStats {
   botSuccessRate?: number;
   efficiencyIndex?: number;
   peakHour?: { hour: string; count: number };
-  statsByTipificacion: { category: string; count: number }[];
-  statsByCola: { cola: string; count: number }[];
-  statsByStatus: { status: string; count: number }[];
   totalTransfers: number;
   totalResponses: number;
   anomalies?: { column: string; row_index: number; value: number; severity: 'high' | 'medium' }[];
-  // Metadata for schema-agnostic UI
-  detectedSchema?: {
+  forecast?: { hour: string; count: number }[];
+  rootCauseAnalysis?: Record<string, string>;
+  detectedSchema: {
     categorical: string[];
     numeric: string[];
     temporal?: string;
@@ -113,11 +118,19 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
   const timeIdx = columnProfiles.find(p => (p.isTime && !p.normHeader.includes('duracion')) || p.normHeader.includes('hora') || p.normHeader.includes('time'))?.index ?? -1;
   
   const categoricalProfiles = columnProfiles
-    .filter(p => p.index !== dateIdx && p.index !== timeIdx)
-    .sort((a, b) => b.categoryScore - a.categoryScore)
-    .slice(0, 5);
+    .filter(p => p.index !== dateIdx && p.index !== timeIdx && !p.isNumeric)
+    .sort((a, b) => b.categoryScore - a.categoryScore);
 
   const numericProfiles = columnProfiles.filter(p => p.isNumeric && !p.isDate && !p.isTime);
+  
+  // Identify duration columns specifically (AHT, Duration, Talking Time)
+  const durationIdx = columnProfiles.find(p => 
+    p.normHeader.includes('duracion') || 
+    p.normHeader.includes('duration') || 
+    p.normHeader.includes('aht') || 
+    p.normHeader.includes('talking') ||
+    p.normHeader.includes('tiempo_hablado')
+  )?.index ?? -1;
 
   // Stats aggregators
   const hoursMap = new Map<string, number>();
@@ -160,9 +173,15 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
         categoricalMaps[catIdx].set(value, (categoricalMaps[catIdx].get(value) || 0) + 1);
       }
 
-      // Numeric Mapping
-      if (columnProfiles[colIndex].isNumeric) {
-        const num = parseFloat(String(value).replace(/[,%]/g, ''));
+      // Numeric Mapping & Normalization
+      if (columnProfiles[colIndex].isNumeric || columnProfiles[colIndex].normHeader.includes('duracion') || columnProfiles[colIndex].normHeader.includes('tiempo')) {
+        let num = 0;
+        if (String(value).includes(':')) {
+           num = parseTimeToSeconds(String(value));
+        } else {
+           num = parseFloat(String(value).replace(/[,%$]/g, ''));
+        }
+        
         if (!isNaN(num)) {
           if (!numericValues[header]) numericValues[header] = [];
           numericValues[header].push(num);
@@ -182,14 +201,17 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
 
   const sessionsByHour = Array.from(hoursMap.entries()).map(([hour, count]) => ({ hour, count }));
   
-  const categoricalStats = categoricalMaps.map((map, i) => {
-    return Array.from(map.entries())
-      .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
+  const allCategoricalStats = categoricalProfiles.map((prof, i) => {
+    return {
+      header: prof.header,
+      data: Array.from(categoricalMaps[i].entries())
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15)
+    };
   });
 
-  const numericStats: Record<string, { min: number; max: number; mean: number; sum: number }> = {};
+  const numericStats: DataStats['numericStats'] = {};
   const columnTotals: Record<string, number | string> = {};
 
   Object.entries(numericValues).forEach(([key, values]) => {
@@ -199,7 +221,16 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     const stdDev = Math.sqrt(variance);
     const cv = mean > 0 ? (stdDev / mean) * 100 : 0;
 
-    numericStats[key] = { min: Math.min(...values), max: Math.max(...values), sum, mean, cv };
+    const colAnomalies: { rowIdx: number; value: number; severity: 'high' | 'medium' }[] = [];
+    if (stdDev > 0) {
+      values.forEach((v, i) => {
+        const z = Math.abs((v - mean) / stdDev);
+        if (z > 3) colAnomalies.push({ rowIdx: i, value: v, severity: 'high' });
+        else if (z > 2) colAnomalies.push({ rowIdx: i, value: v, severity: 'medium' });
+      });
+    }
+
+    numericStats[key] = { min: Math.min(...values), max: Math.max(...values), sum, mean, cv, anomalies: colAnomalies };
     
     const prof = columnProfiles.find(p => p.header === key);
     if (prof?.normHeader.includes('duracion') || prof?.normHeader.includes('tiempo')) {
@@ -283,10 +314,7 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       uniqueUsers: new Set(rows.map(r => r[userIdx])).size,
       dateRange,
       sessionsByHour,
-      sessionsByChannel: categoricalStats[0]?.map(s => ({ channel: s.label, count: s.count })) || [],
-      statsByTipificacion: categoricalStats[1]?.map(s => ({ category: s.label, count: s.count })) || [],
-      statsByCola: categoricalStats[2]?.map(s => ({ cola: s.label, count: s.count })) || [],
-      statsByStatus: categoricalStats[3]?.map(s => ({ status: s.label, count: s.count })) || [],
+      allCategoricalStats,
       numericStats,
       columnTotals,
       slaCompliance,
@@ -295,6 +323,8 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       totalTransfers,
       totalResponses,
       anomalies,
+      forecast: generateForecast(sessionsByHour),
+      rootCauseAnalysis: analyzeRootCauses(anomalies, rows, categoricalProfiles, headers),
       peakHour: sessionsByHour.reduce((p, c) => (p.count > c.count) ? p : c, sessionsByHour[0]),
       detectedSchema: {
         categorical: categoricalProfiles.map(p => p.header),
@@ -307,19 +337,41 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
 }
 
 export function generateDataSummary(headers: string[], rows: string[][], stats: DataStats): string {
+  const categoricalSummary = stats.allCategoricalStats.map(c => 
+    `* ${c.header}: Top 3: ${c.data.slice(0, 3).map(d => `${d.label} (${d.count})`).join(', ')}`
+  ).join('\n');
+
+  const anomalySummary = Object.entries(stats.numericStats)
+    .filter(([_, s]) => s.anomalies.length > 0)
+    .map(([header, s]) => `* ${header}: ${s.anomalies.length} valores fuera de rango (Z > 2.5).`)
+    .join('\n');
+
+  const rootCauseBrief = stats.rootCauseAnalysis 
+    ? `\nAnálisis de Causa Raíz Probable:\n${Object.entries(stats.rootCauseAnalysis).map(([k, v]) => `- ${k}: Relacionado con ${v}`).join('\n')}`
+    : '';
+
   return `
 Análisis Forense de Datos:
 - Total Registros: ${stats.totalSessions}
-- Rango: ${stats.dateRange}
+- Usuarios Únicos: ${stats.uniqueUsers}
+- Rango Temporal: ${stats.dateRange}
 - Esquema Detectado:
-  * Categorías principales: ${stats.detectedSchema?.categorical.join(', ')}
-  * Métricas clave: ${stats.detectedSchema?.numeric.join(', ')}
+  * Categorías: ${stats.detectedSchema?.categorical.join(', ')}
+  * Métricas: ${stats.detectedSchema?.numeric.join(', ')}
 
-Distribución Principal (${stats.detectedSchema?.categorical[0] || 'N/A'}):
-${stats.sessionsByChannel.slice(0, 5).map(c => `- ${c.channel}: ${c.count}`).join('\n')}
+Distribución de Categorías:
+${categoricalSummary}
+
+Detección de Anomalías:
+${anomalySummary || 'No se detectaron valores atípicos significativos en métricas.'}
+${rootCauseBrief}
 
 Estadísticas de Rendimiento:
 - SLA Promedio: ${stats.slaCompliance?.toFixed(1)}%
 - Éxito Automatización: ${stats.botSuccessRate?.toFixed(1)}%
+- Eficiencia Operativa: ${stats.efficiencyIndex?.toFixed(1)}%
+- AHT Promedio: ${stats.avgDuration || 'N/A'}
+- Total Transferencias: ${stats.totalTransfers}
+- Respuestas Generadas: ${stats.totalResponses}
   `.trim();
 }

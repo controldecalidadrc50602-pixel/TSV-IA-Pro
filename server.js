@@ -109,6 +109,7 @@ app.post('/api/insights', async (req, res) => {
 
         const systemPrompt = `Eres un analista de datos de Contact Center de élite. 
 Analiza el siguiente resumen de datos operativos y genera un análisis estructurado de hallazgos.
+IMPORTANTE: El resumen incluye un "Análisis de Causa Raíz Probable". Úsalo para explicar el PORQUÉ de las anomalías detectadas.
 Responde ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones adicionales.
 
 ESTRUCTURA REQUERIDA:
@@ -117,18 +118,17 @@ ESTRUCTURA REQUERIDA:
     {
       "type": "alert" | "trend" | "achievement" | "risk",
       "title": "Título corto del hallazgo (máx 5 palabras)",
-      "description": "Descripción concisa del hallazgo con contexto",
+      "description": "Descripción concisa del hallazgo con contexto explicativo",
       "value": "Valor o métrica destacada (ej: '87.3%', '+23%', '4h 12m')",
       "action": "Recomendación táctica concreta"
     }
   ],
-  "executiveSummary": "Párrafo ejecutivo de 2-3 oraciones sobre el estado general de la operación"
+  "executiveSummary": "Párrafo ejecutivo de 2-3 oraciones sobre el estado general y proyecciones"
 }
 
 Genera entre 3 y 5 findings. Sé específico con los números del dataset.`;
 
-        const cat0 = stats?.detectedSchema?.categorical[0] || 'Canal';
-        const userMessage = `RESUMEN DEL DATASET:\n${summary}\n\nESTADÍSTICAS CLAVE:\nSLA: ${stats?.slaCompliance?.toFixed(1)}%\nAHT: ${stats?.avgDuration}\nBot Success: ${stats?.botSuccessRate?.toFixed(1)}%\nEficiencia: ${stats?.efficiencyIndex?.toFixed(1)}%\nSesiones: ${stats?.totalSessions}\nHora Pico: ${stats?.peakHour?.hour}:00\nTop ${cat0}: ${stats?.sessionsByChannel?.[0]?.channel}`;
+        const userMessage = `RESUMEN FORENSE DEL DATASET:\n${summary}\n\nESTADÍSTICAS ESTRUCTURADAS:\n${JSON.stringify(stats, null, 2)}`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.0-flash",

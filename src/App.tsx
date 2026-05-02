@@ -59,6 +59,8 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [isBriefingOpen, setIsBriefingOpen] = useState(false);
   const [pendingData, setPendingData] = useState<{headers: string[], rows: any[][], fileName: string} | null>(null);
+  const [globalFilter, setGlobalFilter] = useState<{ column: string; value: string } | null>(null);
+  const [rawFileContent, setRawFileContent] = useState<{ headers: string[]; rows: any[][]; fileName: string } | null>(null);
 
   const handleSignOut = async () => {
     try {
@@ -198,9 +200,20 @@ export default function App() {
     }
   };
 
-  const processFileContent = async (headers: string[], rawRows: any[][], fileName: string) => {
+  const processFileContent = async (headers: string[], rawRows: any[][], fileName: string, filter: {column: string, value: string} | null = null) => {
+      setRawFileContent({ headers, rows: rawRows, fileName });
+      
+      // Filter rows if applicable
+      let filteredRawRows = rawRows;
+      if (filter) {
+        const colIdx = headers.indexOf(filter.column);
+        if (colIdx !== -1) {
+          filteredRawRows = rawRows.filter(r => String(r[colIdx]) === filter.value);
+        }
+      }
+
       // Ensure all cells are strings for initial processing
-      const stringRows = rawRows.map(row => row.map(cell => {
+      const stringRows = filteredRawRows.map(row => row.map(cell => {
           if (cell === null || cell === undefined) return '';
           return String(cell);
       }));
@@ -221,17 +234,27 @@ export default function App() {
         summary
       });
       
-      setReportName(fileName.split('.')[0]); // Default report name
-      setActiveTab('dashboard'); // Auto switch to dashboard
+      if (!filter) setReportName(fileName.split('.')[0]); 
+      setActiveTab('dashboard'); 
       setIsLoading(false);
-      setIsBriefingOpen(true); // Open AI Briefing automatically on new upload
+      if (!filter) setIsBriefingOpen(true); 
 
-      // Reset previous insights
-      setInsightsFindings([]);
-      setInsightsSummary('');
+      // Trigger Auto-Insights if not in filter mode
+      if (!filter) {
+        setInsightsFindings([]);
+        setInsightsSummary('');
+        generateAutoInsights(summary, stats);
+      }
+  };
 
-      // Trigger Auto-Insights in background
-      generateAutoInsights(summary, stats);
+  const handleApplyFilter = (column: string, value: string) => {
+    if (globalFilter?.column === column && globalFilter?.value === value) {
+      setGlobalFilter(null);
+      if (rawFileContent) processFileContent(rawFileContent.headers, rawFileContent.rows, rawFileContent.fileName, null);
+    } else {
+      setGlobalFilter({ column, value });
+      if (rawFileContent) processFileContent(rawFileContent.headers, rawFileContent.rows, rawFileContent.fileName, { column, value });
+    }
   };
 
   const generateAutoInsights = async (summary: string, stats: DataStats) => {
@@ -781,6 +804,8 @@ export default function App() {
                 <Dashboard 
                     stats={data.stats} 
                     insights={data.insights} 
+                    currentFilter={globalFilter}
+                    onFilter={handleApplyFilter}
                     onShare={async () => {
                         setIsLoading(true);
                         try {

@@ -81,7 +81,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
   const [topN, setTopN] = useState(5);
-  const [selectedView, setSelectedView] = useState<'tipificaciones' | 'canales' | 'colas' | 'horas'>('tipificaciones');
+  const [selectedIdx, setSelectedIdx] = useState(0);
 
   // ── Anomaly Detection ──────────────────────────────────────────────────────
   const hourlyAnomaly = useMemo(() => {
@@ -110,7 +110,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
     });
   }, [stats.numericStats]);
 
-  // Helper to format numeric values (remove .0 for integers)
+  // Helper to format numeric values
   const formatNum = (val: number) => {
       if (val % 1 === 0) return val.toLocaleString();
       return val.toFixed(1);
@@ -118,28 +118,26 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
 
   // ── Dynamic Top-N Data ─────────────────────────────────────────────────────
   const topNData = useMemo(() => {
-    switch (selectedView) {
-      case 'tipificaciones':
-        return stats.statsByTipificacion.slice(0, topN).map(d => ({ name: d.category, value: d.count }));
-      case 'canales':
-        return stats.sessionsByChannel.slice(0, topN).map(d => ({ name: d.channel, value: d.count }));
-      case 'colas':
-        return stats.statsByCola.slice(0, topN).map(d => ({ name: d.cola, value: d.count }));
-      case 'horas':
-        return stats.sessionsByHour.filter(h => h.count > 0).slice(0, topN).map(d => ({ name: `${d.hour}:00`, value: d.count }));
+    if (selectedIdx === -1) {
+      return stats.sessionsByHour.filter(h => h.count > 0).slice(0, topN).map(d => ({ name: `${d.hour}:00`, value: d.count }));
     }
-  }, [selectedView, topN, stats]);
+    const cat = stats.allCategoricalStats[selectedIdx];
+    if (!cat) return [];
+    return cat.data.slice(0, topN).map(d => ({ name: d.label, value: d.count }));
+  }, [selectedIdx, topN, stats]);
 
-  // ── Channel vs Hour Heatmap Data ───────────────────────────────────────────
-  const channelShare = useMemo(() => {
-    const total = stats.sessionsByChannel.reduce((a, b) => a + b.count, 0);
-    return stats.sessionsByChannel.slice(0, 6).map((c, i) => ({
-      name: c.channel.length > 15 ? c.channel.slice(0, 13) + '…' : c.channel,
+  // ── Distribution Breakdown Data ───────────────────────────────────────────
+  const distributionData = useMemo(() => {
+    const cat = stats.allCategoricalStats[0];
+    if (!cat) return [];
+    const total = cat.data.reduce((a, b) => a + b.count, 0);
+    return cat.data.slice(0, 8).map((c, i) => ({
+      name: c.label.length > 15 ? c.label.slice(0, 13) + '…' : c.label,
       value: c.count,
       pct: total > 0 ? ((c.count / total) * 100).toFixed(1) : '0',
       fill: COLORS[i % COLORS.length],
     }));
-  }, [stats.sessionsByChannel]);
+  }, [stats.allCategoricalStats]);
 
   // ── Efficiency Breakdown ───────────────────────────────────────────────────
   const efficiencyData = [
@@ -147,13 +145,6 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
     { name: 'Bot Success', value: Math.round(stats.botSuccessRate ?? 0), fill: '#6366F1' },
     { name: 'Eficiencia', value: Math.round(stats.efficiencyIndex ?? 0), fill: '#2DD4BF' },
   ];
-
-  const views = [
-    { id: 'tipificaciones', label: stats.detectedSchema?.categorical[1] || 'Tipificaciones' },
-    { id: 'canales', label: stats.detectedSchema?.categorical[0] || 'Canales' },
-    { id: 'colas', label: stats.detectedSchema?.categorical[2] || 'Colas' },
-    { id: 'horas', label: 'Por Hora' },
-  ] as const;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -197,21 +188,32 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
         <Section title="Análisis Top-N Dinámico" icon={Filter} className="lg:col-span-2">
           <div className="flex flex-wrap items-center gap-3 mb-5">
             {/* View Tabs */}
-            <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1 gap-1">
-              {views.map(v => (
+            <div className="flex flex-wrap bg-slate-100 dark:bg-slate-900 rounded-xl p-1 gap-1">
+              {stats.allCategoricalStats.slice(0, 4).map((cat, i) => (
                 <button
-                  key={v.id}
-                  onClick={() => setSelectedView(v.id)}
+                  key={cat.header}
+                  onClick={() => setSelectedIdx(i)}
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                    selectedView === v.id
+                    selectedIdx === i
                       ? 'bg-brand-turquoise text-white shadow-md shadow-brand-turquoise/30'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
                   )}
                 >
-                  {v.label}
+                  {cat.header}
                 </button>
               ))}
+              <button
+                onClick={() => setSelectedIdx(-1)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  selectedIdx === -1
+                    ? 'bg-brand-turquoise text-white shadow-md shadow-brand-turquoise/30'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                )}
+              >
+                Por Hora
+              </button>
             </div>
 
             {/* Top-N Selector */}
@@ -357,10 +359,9 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
           )}
         </Section>
 
-        {/* Channel Distribution */}
-        <Section title="Distribución por Canal" icon={BarChart2}>
+        <Section title={`Mix de ${stats.allCategoricalStats[0]?.header || 'Categorías'}`} icon={BarChart2}>
           <div className="space-y-3">
-            {channelShare.map((c, i) => (
+            {distributionData.map((c, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.fill }} />
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex-1 truncate" title={c.name}>{c.name}</span>
@@ -376,16 +377,16 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
             ))}
           </div>
 
-          {/* Status breakdown */}
-          {stats.statsByStatus.length > 0 && (
+          {/* Status breakdown replacement - showing more categories */}
+          {stats.allCategoricalStats.length > 1 && (
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Estados de Sesión</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Más Categorías Detectadas</p>
               <div className="flex flex-wrap gap-2">
-                {stats.statsByStatus.slice(0, 6).map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 max-w-[80px] truncate" title={s.status}>{s.status}</span>
-                    <span className="text-[10px] font-black text-slate-700 dark:text-white">{s.count}</span>
+                {stats.allCategoricalStats.slice(1, 4).map((cat, i) => (
+                  <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[(i+1) % COLORS.length] }} />
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 max-w-[80px] truncate" title={cat.header}>{cat.header}</span>
+                    <span className="text-[10px] font-black text-slate-700 dark:text-white">{cat.data.length}</span>
                   </div>
                 ))}
               </div>
