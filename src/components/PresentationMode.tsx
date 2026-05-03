@@ -60,8 +60,8 @@ const tooltipStyle = {
 
 // ... SlideChart component remains the same ...
 function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
-  const schema = stats.detectedSchema;
-  
+  if (type === 'channels' && stats.allCategoricalStats[0]?.data.length > 0) {
+    const data = stats.allCategoricalStats[0].data.slice(0, 6);
     if (data.length === 0) return <div className="h-full flex items-center justify-center text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-800/50 rounded-2xl">Sin datos suficientes</div>;
 
     return (
