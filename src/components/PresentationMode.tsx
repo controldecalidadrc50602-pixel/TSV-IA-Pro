@@ -62,18 +62,18 @@ const tooltipStyle = {
 function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
   const schema = stats.detectedSchema;
   
-  if (type === 'channels' && stats.allCategoricalStats[0]?.data.length > 0) {
-    const data = stats.allCategoricalStats[0].data.slice(0, 6);
+    if (data.length === 0) return <div className="h-full flex items-center justify-center text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-800/50 rounded-2xl">Sin datos suficientes</div>;
+
     return (
-      <div className="h-[220px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-[240px] w-full">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
           <PieChart>
-            <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+            <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
               paddingAngle={4} dataKey="count" nameKey="label">
               {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Pie>
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Legend formatter={(v) => <span style={{ color: '#94A3B8', fontSize: '10px', fontWeight: 700 }}>{v}</span>} />
+            <Legend verticalAlign="bottom" formatter={(v) => <span style={{ color: '#94A3B8', fontSize: '10px', fontWeight: 700 }}>{v}</span>} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -84,15 +84,15 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     const data = stats.allCategoricalStats[1].data.slice(0, 6);
     const label = stats.allCategoricalStats[1].header;
     return (
-      <div className="h-[220px] w-full">
-        <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-widest">{label}</div>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical">
+      <div className="h-[240px] w-full">
+        <div className="text-[10px] font-bold text-slate-500 uppercase mb-3 ml-1 tracking-widest">{label} (Top 6)</div>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+          <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
             <XAxis type="number" hide />
             <YAxis dataKey="label" type="category" width={110} fontSize={9} fontWeight={700}
               tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Bar dataKey="count" fill="#2DD4BF" radius={[0, 6, 6, 0]} barSize={18} />
+            <Bar dataKey="count" fill="#2DD4BF" radius={[0, 6, 6, 0]} barSize={20} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -103,15 +103,15 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
       const data = stats.allCategoricalStats[2].data.slice(0, 6);
       const label = stats.allCategoricalStats[2].header;
       return (
-        <div className="h-[220px] w-full">
-          <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1 tracking-widest">{label}</div>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical">
+        <div className="h-[240px] w-full">
+          <div className="text-[10px] font-bold text-slate-500 uppercase mb-3 ml-1 tracking-widest">{label} (Distribución)</div>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+            <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
               <XAxis type="number" hide />
               <YAxis dataKey="label" type="category" width={110} fontSize={9} fontWeight={700}
                 tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-              <Bar dataKey="count" fill="#6366F1" radius={[0, 6, 6, 0]} barSize={18} />
+              <Bar dataKey="count" fill="#6366F1" radius={[0, 6, 6, 0]} barSize={20} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -120,9 +120,12 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
 
    if (type === 'efficiency' || type === 'overview' || type === 'hourly' || type === 'strategy') {
     const data = stats.sessionsByHour?.filter(h => h.count > 0) ?? [];
+    if (data.length === 0) return <div className="h-full flex items-center justify-center text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-800/50 rounded-2xl">Sin actividad horaria detectada</div>;
+
     return (
-      <div className="h-[220px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-[240px] w-full">
+        <div className="text-[10px] font-bold text-slate-500 uppercase mb-3 ml-1 tracking-widest">Actividad Temporal</div>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
           <AreaChart data={data}>
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -155,7 +158,14 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     );
   }
 
-  return null;
+  return (
+    <div className="h-[240px] w-full flex items-center justify-center bg-slate-800/30 rounded-3xl border border-white/5">
+      <div className="text-center">
+        <BarChart3 className="mx-auto mb-2 text-slate-600" size={32} />
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Métrica no disponible para este slide</p>
+      </div>
+    </div>
+  );
 }
 
 const THEMES = [

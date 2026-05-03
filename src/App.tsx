@@ -266,17 +266,23 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ summary, stats })
       });
-      if (response.ok) {
-        const result = await response.json();
-        setInsightsFindings(result.findings ?? []);
-        setInsightsSummary(result.executiveSummary ?? '');
-        // Backward compat: set text insights for PresentationMode
-        if (result.executiveSummary) {
-          setData(prev => prev ? { ...prev, insights: result.executiveSummary } : null);
-        }
+      
+      if (!response.ok) throw new Error("Server not responding");
+
+      const result = await response.json();
+      setInsightsFindings(result.findings ?? []);
+      setInsightsSummary(result.executiveSummary ?? '');
+      if (result.executiveSummary) {
+        setData(prev => prev ? { ...prev, insights: result.executiveSummary } : null);
       }
     } catch (err) {
-      console.error('Auto-insights error', err);
+      console.warn('AI Server Offline: Utilizando fallback de insights locales.');
+      // Fallback insights locales si el servidor no responde
+      setInsightsFindings([
+        { type: 'trend', title: 'Dataset Procesado', description: 'El sistema ha analizado las sesiones locales correctamente.', value: `${stats.totalSessions}`, action: 'Inicia el servidor de IA para análisis profundo.' },
+        { type: 'achievement', title: 'SLA Detectado', description: 'Nivel de cumplimiento basado en métricas locales.', value: `${stats.slaCompliance?.toFixed(1)}%`, action: 'Monitorear picos horários.' }
+      ]);
+      setInsightsSummary("Análisis local completado. Para insights avanzados de IA, asegúrese de que el servidor en el puerto 3001 esté activo.");
     } finally {
       setInsightsLoading(false);
     }

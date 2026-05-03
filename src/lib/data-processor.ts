@@ -73,13 +73,21 @@ export function formatDuration(seconds: number): string {
 const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export function processData(headersRaw: string[], rows: string[][]): { processedRows: ProcessedRow[], stats: DataStats, formattedHeaders: string[] } {
-  const headers = headersRaw.map(h => String(h || '').replace(/\n/g, ' ').trim());
+  // 0. Preliminary Header Cleaning (Blindaje contra archivos corruptos o mal formateados)
+  const headers = headersRaw.map(h => {
+    let clean = String(h || '').replace(/\n/g, ' ').trim();
+    // Eliminar repeticiones de puntuación excesiva como :::: o ;;;;
+    clean = clean.replace(/[:;,\.]{2,}/g, '');
+    // Si la cabecera quedó vacía tras la limpieza, darle un nombre genérico
+    return clean || 'Columna_Sin_Nombre';
+  });
+
   const processedRows: ProcessedRow[] = [];
   
   // 1. Schema Discovery Phase
   const columnProfiles = headers.map((header, index) => {
     const normHeader = normalize(header);
-    const sampleValues = rows.slice(0, 50).map(r => String(r[index] || '')).filter(v => v && v !== '-');
+    const sampleValues = rows.slice(0, 50).map(r => String(r[index] || '')).filter(v => v && v !== '-' && v.trim() !== '');
     const uniqueValues = new Set(sampleValues);
     
     // Check for Date
@@ -104,6 +112,11 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     // Check for Time (HH:mm)
     const isTime = sampleValues.length > 0 && sampleValues.every(v => v.includes(':') && v.split(':').length >= 2);
     
+    // Category Score: Ignorar si solo hay 1 valor único o demasiados valores únicos (ID)
+    const categoryScore = (uniqueValues.size > 1 && uniqueValues.size < 35) 
+        ? (1 - (uniqueValues.size / Math.max(1, sampleValues.length))) 
+        : 0;
+    
     return {
       index,
       header,
@@ -112,7 +125,7 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       isNumeric: isNumeric && !looksLikeId,
       isTime,
       uniqueCount: uniqueValues.size,
-      categoryScore: uniqueValues.size > 0 && uniqueValues.size < 25 ? (1 - (uniqueValues.size / Math.max(1, sampleValues.length))) : 0
+      categoryScore
     };
   });
 
