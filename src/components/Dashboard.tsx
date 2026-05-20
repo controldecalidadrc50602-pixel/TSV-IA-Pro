@@ -206,7 +206,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
               </div>
             </div>
             <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
+              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -217,7 +217,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                   <XAxis dataKey="hour" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} dy={8} />
                   <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
+                  <Tooltip isAnimationActive={false} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
                   <Area 
                     isAnimationActive={false}
                     type="monotone" 
@@ -278,11 +278,11 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             <div className="flex-1 flex flex-col min-h-0">
                {idx === 0 ? (
                 <div className="flex-1 relative flex items-center justify-center">
-                    <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
+                    <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                       <PieChart>
                         <Pie 
                           isAnimationActive={false}
-                          data={cat.data.slice(0, 8)} 
+                          data={(cat.data || []).slice(0, 8)} 
                           cx="50%" cy="50%" 
                           innerRadius={60} outerRadius={90}
                           paddingAngle={5} dataKey="count" nameKey="label"
@@ -291,24 +291,24 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                         >
                           {(cat.data ?? []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip isAnimationActive={false} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute flex flex-col items-center pointer-events-none">
-                       <span className="text-3xl font-black text-slate-900 dark:text-white">{cat.data.length}</span>
+                       <span className="text-3xl font-black text-slate-900 dark:text-white">{(cat.data || []).length}</span>
                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Items</span>
                     </div>
                  </div>
                ) : (
-                 <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
-                    <BarChart layout="vertical" data={cat.data.slice(0, 6)}>
+                 <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
+                    <BarChart layout="vertical" data={(cat.data || []).slice(0, 6)}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
                       <XAxis type="number" hide />
                       <YAxis dataKey="label" type="category" width={100} fontSize={9} fontWeight={700}
                         tick={{ fill: '#64748B' }} axisLine={false} tickLine={false} />
-                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }} />
+                      <Tooltip isAnimationActive={false} cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }} />
                       <Bar isAnimationActive={false} dataKey="count" fill={COLORS[idx % COLORS.length]} radius={[0, 8, 8, 0]} barSize={20}>
-                        {cat.data.slice(0, 6).map((_, i) => <Cell key={i} fillOpacity={1 - (i * 0.1)} />)}
+                        {(cat.data || []).slice(0, 6).map((_, i) => <Cell key={i} fillOpacity={1 - (i * 0.1)} />)}
                       </Bar>
                     </BarChart>
                  </ResponsiveContainer>

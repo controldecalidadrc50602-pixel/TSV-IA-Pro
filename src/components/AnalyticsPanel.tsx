@@ -124,15 +124,15 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
     }
     const cat = (stats.allCategoricalStats ?? [])[selectedIdx];
     if (!cat) return [];
-    return cat.data.slice(0, topN).map(d => ({ name: d.label, value: d.count }));
+    return (cat?.data || []).slice(0, topN).map(d => ({ name: d.label, value: d.count }));
   }, [selectedIdx, topN, stats]);
 
   // ── Distribution Breakdown Data ───────────────────────────────────────────
   const distributionData = useMemo(() => {
     const cat = (stats.allCategoricalStats ?? [])[0];
     if (!cat) return [];
-    const total = cat.data.reduce((a, b) => a + b.count, 0);
-    return cat.data.slice(0, 8).map((c, i) => ({
+    const total = (cat?.data || []).reduce((a, b) => a + b.count, 0);
+    return (cat?.data || []).slice(0, 8).map((c, i) => ({
       name: c.label.length > 15 ? c.label.slice(0, 13) + '…' : c.label,
       value: c.count,
       pct: total > 0 ? ((c.count / total) * 100).toFixed(1) : '0',
@@ -247,7 +247,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                   tick={{ fill: '#94A3B8', fontWeight: 700 }}
                   tickFormatter={(v) => v.length > 18 ? v.slice(0, 16) + '…' : v}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
                 <Bar isAnimationActive={false} dataKey="value" name="Sesiones" radius={[0, 6, 6, 0]} barSize={18}>
                   {topNData?.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -327,7 +327,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                     <XAxis dataKey="hour" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }}
                       tickFormatter={(v) => `${v}h`} interval={3} />
                     <YAxis fontSize={9} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
                     <ReferenceLine y={hourlyAnomaly.threshold} stroke="#F59E0B" strokeDasharray="6 3" strokeWidth={2} />
                     <ReferenceLine y={hourlyAnomaly.mean} stroke="#2DD4BF" strokeDasharray="6 3" strokeWidth={1.5} />
                     <Bar isAnimationActive={false} dataKey="count" name="Sesiones" radius={[4, 4, 0, 0]} barSize={14}>
@@ -387,7 +387,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                   <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[(i+1) % COLORS.length] }} />
                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 max-w-[80px] truncate" title={cat.header}>{cat.header}</span>
-                    <span className="text-[10px] font-black text-slate-700 dark:text-white">{cat.data.length}</span>
+                    <span className="text-[10px] font-black text-slate-700 dark:text-white">{(cat?.data || []).length}</span>
                   </div>
                 ))}
               </div>
@@ -462,7 +462,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
               <XAxis dataKey="hour" fontSize={10} tickLine={false} axisLine={false}
                 tick={{ fill: '#94A3B8', fontWeight: 700 }} tickFormatter={(v) => `${v}h`} interval={3} />
               <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
               {hourlyAnomaly && (
                 <ReferenceLine y={hourlyAnomaly.mean} stroke="#2DD4BF" strokeDasharray="6 3"
                   label={{ value: 'Media', fill: '#2DD4BF', fontSize: 10, fontWeight: 700 }} />

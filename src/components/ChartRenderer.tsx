@@ -42,8 +42,8 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
             <XAxis dataKey={nameKey} fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
             <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Bar dataKey={dataKey} fill={color} radius={[6, 6, 0, 0]} barSize={32} />
+            <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+            <Bar isAnimationActive={false} dataKey={dataKey} fill={color} radius={[6, 6, 0, 0]} barSize={32} />
           </BarChart>
         );
 
@@ -53,8 +53,8 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
             <XAxis dataKey={nameKey} fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
             <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} dot={{ fill: color, r: 4 }} />
+            <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+            <Line isAnimationActive={false} type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} dot={{ fill: color, r: 4 }} />
           </LineChart>
         );
 
@@ -70,8 +70,8 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
             <XAxis dataKey={nameKey} fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
             <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} fill="url(#colorArea)" />
+            <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+            <Area isAnimationActive={false} type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} fill="url(#colorArea)" />
           </AreaChart>
         );
 

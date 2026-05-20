@@ -59,7 +59,11 @@ export function ChatAssistant({ dataSummary, rawStats, onClose, projectId }: Cha
   useEffect(() => {
     if (messages.length > 0) {
       const cacheKey = `tsv_chat_${projectId || 'default'}`;
-      localStorage.setItem(cacheKey, JSON.stringify(messages));
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(messages));
+      } catch (err) {
+        console.warn('Storage limit exceeded or unavailable for chat cache', err);
+      }
     }
   }, [messages, projectId]);
   const [input, setInput] = useState('');

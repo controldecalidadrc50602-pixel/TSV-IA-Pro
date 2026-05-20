@@ -66,13 +66,12 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
 
     return (
       <div className="h-[240px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
-            <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-              paddingAngle={4} dataKey="count" nameKey="label">
+            <Pie isAnimationActive={false} data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="count" nameKey="label">
               {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+            <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
             <Legend verticalAlign="bottom" formatter={(v) => <span style={{ color: '#94A3B8', fontSize: '10px', fontWeight: 700 }}>{v}</span>} />
           </PieChart>
         </ResponsiveContainer>
@@ -86,13 +85,13 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     return (
       <div className="h-[240px] w-full">
         <div className="text-[10px] font-bold text-slate-500 uppercase mb-3 ml-1 tracking-widest">{label} (Top 6)</div>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
             <XAxis type="number" hide />
             <YAxis dataKey="label" type="category" width={110} fontSize={9} fontWeight={700}
               tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Bar dataKey="count" fill="#2DD4BF" radius={[0, 6, 6, 0]} barSize={20} />
+            <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+            <Bar isAnimationActive={false} dataKey="count" fill="#2DD4BF" radius={[4, 4, 0, 0]} barSize={30} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -105,13 +104,13 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
       return (
         <div className="h-[240px] w-full">
           <div className="text-[10px] font-bold text-slate-500 uppercase mb-3 ml-1 tracking-widest">{label} (Distribución)</div>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
               <XAxis type="number" hide />
               <YAxis dataKey="label" type="category" width={110} fontSize={9} fontWeight={700}
                 tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-              <Bar dataKey="count" fill="#6366F1" radius={[0, 6, 6, 0]} barSize={20} />
+              <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+              <Bar isAnimationActive={false} dataKey="count" fill="#6366F1" radius={[0, 6, 6, 0]} barSize={20} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -125,7 +124,7 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
     return (
       <div className="h-[240px] w-full">
         <div className="text-[10px] font-bold text-slate-500 uppercase mb-3 ml-1 tracking-widest">Actividad Temporal</div>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart data={data}>
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -149,8 +148,8 @@ function SlideChart({ type, stats }: { type?: string; stats: DataStats }) {
                 axisLine={false} 
                 tick={{ fill: '#94A3B8' }} 
             />
-            <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
-            <Area type="monotone" dataKey="count" stroke="#2DD4BF" strokeWidth={3}
+            <Tooltip isAnimationActive={false} contentStyle={tooltipStyle} itemStyle={{ color: '#F1F5F9' }} />
+            <Area isAnimationActive={false} type="monotone" dataKey="count" stroke="#2DD4BF" strokeWidth={3}
               fillOpacity={1} fill="url(#areaGrad)" name="Sesiones" />
           </AreaChart>
         </ResponsiveContainer>

@@ -295,6 +295,7 @@ export default function App() {
     const ext = file.name.split('.').pop()?.toLowerCase();
 
     if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
+      try {
         Papa.parse(file, {
           delimiter: ext === 'csv' ? ',' : '\t',
           skipEmptyLines: true,
@@ -315,6 +316,10 @@ export default function App() {
             setIsLoading(false);
           }
         });
+      } catch (err: any) {
+        setError(`Fatal error parsing file: ${err.message}`);
+        setIsLoading(false);
+      }
     } else if (ext === 'xlsx' || ext === 'xls') {
         const reader = new FileReader();
         reader.onload = async (e) => {
