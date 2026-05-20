@@ -13,6 +13,9 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['icon-512.png', 'icon-192.png', 'apple-touch-icon.png'],
+        workbox: {
+          maximumFileSizeToCacheInBytes: 5000000 // 5MB para permitir el bundle principal
+        },
         manifest: {
           name: 'TSV Intelligence Pro',
           short_name: 'TSV IA Pro',
