@@ -219,6 +219,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                   <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
                   <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
                   <Area 
+                    isAnimationActive={false}
                     type="monotone" 
                     dataKey="count" 
                     stroke="#0D9488" 
@@ -230,6 +231,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                     data={chartData.filter(d => d.type === 'historical' || d === chartData.find(x => x.type === 'historical' && chartData[chartData.indexOf(x)+1]?.type === 'forecast'))}
                   />
                   <Area 
+                    isAnimationActive={false}
                     type="monotone" 
                     dataKey="count" 
                     stroke="#0D9488" 
@@ -279,6 +281,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                     <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                       <PieChart>
                         <Pie 
+                          isAnimationActive={false}
                           data={cat.data.slice(0, 8)} 
                           cx="50%" cy="50%" 
                           innerRadius={60} outerRadius={90}
@@ -304,7 +307,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                       <YAxis dataKey="label" type="category" width={100} fontSize={9} fontWeight={700}
                         tick={{ fill: '#64748B' }} axisLine={false} tickLine={false} />
                       <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }} />
-                      <Bar dataKey="count" fill={COLORS[idx % COLORS.length]} radius={[0, 8, 8, 0]} barSize={20}>
+                      <Bar isAnimationActive={false} dataKey="count" fill={COLORS[idx % COLORS.length]} radius={[0, 8, 8, 0]} barSize={20}>
                         {cat.data.slice(0, 6).map((_, i) => <Cell key={i} fillOpacity={1 - (i * 0.1)} />)}
                       </Bar>
                     </BarChart>

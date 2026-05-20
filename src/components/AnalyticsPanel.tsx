@@ -248,7 +248,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                   tickFormatter={(v) => v.length > 18 ? v.slice(0, 16) + '…' : v}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Sesiones" radius={[0, 6, 6, 0]} barSize={18}>
+                <Bar isAnimationActive={false} dataKey="value" name="Sesiones" radius={[0, 6, 6, 0]} barSize={18}>
                   {topNData?.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -330,7 +330,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                     <Tooltip content={<CustomTooltip />} />
                     <ReferenceLine y={hourlyAnomaly.threshold} stroke="#F59E0B" strokeDasharray="6 3" strokeWidth={2} />
                     <ReferenceLine y={hourlyAnomaly.mean} stroke="#2DD4BF" strokeDasharray="6 3" strokeWidth={1.5} />
-                    <Bar dataKey="count" name="Sesiones" radius={[4, 4, 0, 0]} barSize={14}>
+                    <Bar isAnimationActive={false} dataKey="count" name="Sesiones" radius={[4, 4, 0, 0]} barSize={14}>
                       {stats.sessionsByHour.map((entry, i) => (
                         <Cell
                           key={i}
@@ -468,6 +468,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
                   label={{ value: 'Media', fill: '#2DD4BF', fontSize: 10, fontWeight: 700 }} />
               )}
               <Line
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="count"
                 name="Sesiones"
