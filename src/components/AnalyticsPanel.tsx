@@ -232,7 +232,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
           </div>
 
           <div className="h-[220px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={topNData} layout="vertical" margin={{ left: 8, right: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.15)" />
                 <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }} />
@@ -320,7 +320,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
               </div>
 
               <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                   <BarChart data={stats.sessionsByHour} margin={{ top: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
                     <XAxis dataKey="hour" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }}
@@ -449,7 +449,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
       {/* Row 5: Trend Line — Sesiones por Hora */}
       <Section title="Curva de Demanda Horaria" icon={TrendingUp}>
         <div className="h-[180px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
             <LineChart data={stats.sessionsByHour} margin={{ top: 4, right: 16 }}>
               <defs>
                 <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">

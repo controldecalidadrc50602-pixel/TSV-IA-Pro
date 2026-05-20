@@ -4,6 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts';
+import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
 export interface ChartConfig {
   type: 'bar' | 'line' | 'pie' | 'area';
@@ -104,15 +105,17 @@ export function ChartRenderer({ config }: ChartRendererProps) {
   };
 
   return (
-    <div className="mt-3 bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-      {title && (
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{title}</p>
-      )}
-      <div className="h-[200px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart() as React.ReactElement}
-        </ResponsiveContainer>
+    <WidgetErrorBoundary>
+      <div className="mt-3 bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+        {title && (
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{title}</p>
+        )}
+        <div className="h-[200px] w-full">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+            {renderChart() as React.ReactElement}
+          </ResponsiveContainer>
+        </div>
       </div>
-    </div>
+    </WidgetErrorBoundary>
   );
 }

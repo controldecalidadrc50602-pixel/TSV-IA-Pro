@@ -215,7 +215,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
               </div>
             </div>
             <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -285,7 +285,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             <div className="flex-1 flex flex-col min-h-0">
                {idx === 0 ? (
                 <div className="flex-1 relative flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                       <PieChart>
                         <Pie 
                           data={cat.data.slice(0, 8)} 
@@ -306,7 +306,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                     </div>
                  </div>
                ) : (
-                 <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
+                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                     <BarChart layout="vertical" data={cat.data.slice(0, 6)}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
                       <XAxis type="number" hide />
