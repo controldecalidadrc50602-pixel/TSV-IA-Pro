@@ -83,8 +83,10 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
            </div>
            <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Executive Intelligence Center</h2>
-              <div className="flex items-center gap-3">
-                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-widest">SLA Optimizado</span>
+               <div className="flex items-center gap-3">
+                 <span className="px-2.5 py-1 rounded-lg bg-brand-turquoise/10 text-brand-turquoise text-[9px] font-black uppercase tracking-widest">
+                   {stats.slaCompliance && stats.slaCompliance > 0 ? (stats.slaCompliance >= 80 ? 'SLA Optimizado' : 'SLA en Riesgo') : 'Datos Detectados'}
+                 </span>
                  <span className="text-slate-300 dark:text-slate-700">|</span>
                  <span className="text-xs font-bold text-slate-400">{stats.dateRange}</span>
               </div>
@@ -106,42 +108,29 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
       {/* KPI Cards */}
       {show('kpis') && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <KpiCard 
-            icon={TrendingUp} 
-            label="SLA Compliance" 
-            value={`${(stats.slaCompliance || 0).toFixed(1)}%`}
-            trend={+12.4}
-            status={stats.slaCompliance > 80 ? 'success' : 'warning'}
-            color="bg-emerald-500" 
-            delay={0.05} 
-          />
-          <KpiCard 
-            icon={Sparkles} 
-            label="AI Resolution" 
-            value={`${(stats.botSuccessRate || 0).toFixed(1)}%`}
-            trend={+5.2}
-            status="success"
-            color="bg-brand-turquoise" 
-            delay={0.1} 
-          />
-          <KpiCard 
-            icon={Clock} 
-            label="Avg. Handling Time" 
-            value={stats.avgDuration || "0m"}
-            trend={-2.1}
-            status="success"
-            color="bg-indigo-500" 
-            delay={0.15} 
-          />
-          <KpiCard 
-            icon={Hash} 
-            label="Operational Index" 
-            value={`${(stats.efficiencyIndex || 0).toFixed(1)}%`}
-            trend={+8.7}
-            status={stats.efficiencyIndex > 70 ? 'success' : 'warning'}
-            color="bg-slate-900" 
-            delay={0.2} 
-          />
+          {Object.keys(stats.numericStats || {}).slice(0, 4).map((key, i) => (
+            <KpiCard 
+              key={key}
+              icon={[TrendingUp, Sparkles, Clock, Hash][i % 4]} 
+              label={`Total ${key}`} 
+              value={stats.numericStats[key].sum.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+              color={['bg-emerald-500', 'bg-brand-turquoise', 'bg-indigo-500', 'bg-slate-900'][i % 4]} 
+              delay={0.05 * (i + 1)} 
+            />
+          ))}
+          {/* Fallbacks si no hay suficientes columnas numéricas */}
+          {Object.keys(stats.numericStats || {}).length < 1 && (
+            <KpiCard icon={Hash} label="Total Registros" value={stats.totalSessions.toLocaleString()} color="bg-emerald-500" delay={0.05} />
+          )}
+          {Object.keys(stats.numericStats || {}).length < 2 && (
+            <KpiCard icon={Sparkles} label="Categorías" value={(stats.detectedSchema?.categorical?.length || 0).toString()} color="bg-brand-turquoise" delay={0.1} />
+          )}
+          {Object.keys(stats.numericStats || {}).length < 3 && stats.avgDuration && stats.avgDuration !== '-' && (
+            <KpiCard icon={Clock} label="Tiempo Promedio" value={stats.avgDuration} color="bg-indigo-500" delay={0.15} />
+          )}
+          {Object.keys(stats.numericStats || {}).length < 4 && stats.totalTransfers > 0 && (
+            <KpiCard icon={TrendingUp} label="Transferencias" value={stats.totalTransfers.toString()} color="bg-slate-900" delay={0.2} />
+          )}
         </div>
       )}
 

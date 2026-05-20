@@ -99,15 +99,19 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
         return !isNaN(parseFloat(n)) && isFinite(Number(n));
     }) && !sampleValues.every(v => v.includes(':'));
     
-    // Check for ID-like column
-    const looksLikeId = isNumeric && (
+    const looksLikeId = 
         normHeader.includes('id') || 
-        normHeader.includes('num') || 
-        normHeader.includes('folio') || 
-        normHeader.includes('contacto') ||
-        normHeader.includes('sesion') ||
-        sampleValues.some(v => v.length > 10)
-    );
+        normHeader.includes('uuid') ||
+        normHeader.includes('hash') ||
+        normHeader.includes('token') ||
+        (isNumeric && (
+            normHeader.includes('num') || 
+            normHeader.includes('folio') || 
+            normHeader.includes('contacto') ||
+            normHeader.includes('sesion')
+        )) ||
+        sampleValues.some(v => v.length > 30) || 
+        uniqueValues.size === sampleValues.length && sampleValues.length > 10;
     
     // Check for Time (HH:mm)
     const isTime = sampleValues.length > 0 && sampleValues.every(v => v.includes(':') && v.split(':').length >= 2);
@@ -135,6 +139,8 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
   
   const categoricalProfiles = columnProfiles
     .filter(p => p.index !== dateIdx && p.index !== timeIdx && !p.isNumeric)
+    // Filtramos IDs: Si todos o casi todos los valores son únicos, no es categoría
+    .filter(p => p.uniqueCount === 1 || p.uniqueCount < Math.min(30, rows.length * 0.5))
     .sort((a, b) => b.categoryScore - a.categoryScore);
 
   const numericProfiles = columnProfiles.filter(p => p.isNumeric && !p.isDate && !p.isTime);
@@ -145,7 +151,11 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     p.normHeader.includes('duration') || 
     p.normHeader.includes('aht') || 
     p.normHeader.includes('talking') ||
-    p.normHeader.includes('tiempo')
+    p.normHeader.includes('tiempo') ||
+    p.normHeader.includes('minutos') ||
+    p.normHeader.includes('segundos') ||
+    p.normHeader.includes('handling') ||
+    p.normHeader.includes('espera')
   )?.index ?? -1;
 
   // Stats aggregators
