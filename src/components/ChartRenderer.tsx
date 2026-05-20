@@ -111,7 +111,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{title}</p>
         )}
         <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+          <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
             {renderChart() as React.ReactElement}
           </ResponsiveContainer>
         </div>

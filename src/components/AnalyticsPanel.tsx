@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { DataStats, formatDuration } from '@/lib/data-processor';
 import { cn } from '@/lib/utils';
+import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
 interface AnalyticsPanelProps {
   stats: DataStats;
@@ -85,7 +86,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
 
   // ── Anomaly Detection ──────────────────────────────────────────────────────
   const hourlyAnomaly = useMemo(() => {
-    const hours = stats.sessionsByHour.filter(h => h.count > 0);
+    const hours = (stats.sessionsByHour ?? []).filter(h => h.count > 0);
     if (hours.length < 3) return null;
     const values = hours.map(h => h.count);
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -119,16 +120,16 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
   // ── Dynamic Top-N Data ─────────────────────────────────────────────────────
   const topNData = useMemo(() => {
     if (selectedIdx === -1) {
-      return stats.sessionsByHour.filter(h => h.count > 0).slice(0, topN).map(d => ({ name: `${d.hour}:00`, value: d.count }));
+      return (stats.sessionsByHour ?? []).filter(h => h.count > 0).slice(0, topN).map(d => ({ name: `${d.hour}:00`, value: d.count }));
     }
-    const cat = stats.allCategoricalStats[selectedIdx];
+    const cat = (stats.allCategoricalStats ?? [])[selectedIdx];
     if (!cat) return [];
     return cat.data.slice(0, topN).map(d => ({ name: d.label, value: d.count }));
   }, [selectedIdx, topN, stats]);
 
   // ── Distribution Breakdown Data ───────────────────────────────────────────
   const distributionData = useMemo(() => {
-    const cat = stats.allCategoricalStats[0];
+    const cat = (stats.allCategoricalStats ?? [])[0];
     if (!cat) return [];
     const total = cat.data.reduce((a, b) => a + b.count, 0);
     return cat.data.slice(0, 8).map((c, i) => ({
@@ -189,7 +190,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
           <div className="flex flex-wrap items-center gap-3 mb-5">
             {/* View Tabs */}
             <div className="flex flex-wrap bg-slate-100 dark:bg-slate-900 rounded-xl p-1 gap-1">
-              {stats.allCategoricalStats.slice(0, 4).map((cat, i) => (
+              {(stats.allCategoricalStats ?? []).slice(0, 4).map((cat, i) => (
                 <button
                   key={cat.header}
                   onClick={() => setSelectedIdx(i)}
@@ -232,7 +233,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
           </div>
 
           <div className="h-[220px]">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={topNData} layout="vertical" margin={{ left: 8, right: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.15)" />
                 <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }} />
@@ -320,7 +321,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
               </div>
 
               <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                   <BarChart data={stats.sessionsByHour} margin={{ top: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
                     <XAxis dataKey="hour" fontSize={9} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8', fontWeight: 700 }}
@@ -359,7 +360,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
           )}
         </Section>
 
-        <Section title={`Mix de ${stats.allCategoricalStats[0]?.header || 'Categorías'}`} icon={BarChart2}>
+        <Section title={`Mix de ${(stats.allCategoricalStats ?? [])[0]?.header || 'Categorías'}`} icon={BarChart2}>
           <div className="space-y-3">
             {distributionData.map((c, i) => (
               <div key={i} className="flex items-center gap-3">
@@ -378,11 +379,11 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
           </div>
 
           {/* Status breakdown replacement - showing more categories */}
-          {stats.allCategoricalStats.length > 1 && (
+          {(stats.allCategoricalStats ?? []).length > 1 && (
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Más Categorías Detectadas</p>
               <div className="flex flex-wrap gap-2">
-                {stats.allCategoricalStats.slice(1, 4).map((cat, i) => (
+                {(stats.allCategoricalStats ?? []).slice(1, 4).map((cat, i) => (
                   <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[(i+1) % COLORS.length] }} />
                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 max-w-[80px] truncate" title={cat.header}>{cat.header}</span>
@@ -449,7 +450,7 @@ export function AnalyticsPanel({ stats }: AnalyticsPanelProps) {
       {/* Row 5: Trend Line — Sesiones por Hora */}
       <Section title="Curva de Demanda Horaria" icon={TrendingUp}>
         <div className="h-[180px]">
-          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+          <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
             <LineChart data={stats.sessionsByHour} margin={{ top: 4, right: 16 }}>
               <defs>
                 <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">

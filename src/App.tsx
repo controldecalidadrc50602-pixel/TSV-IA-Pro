@@ -372,22 +372,32 @@ export default function App() {
   };
 
   const loadFromHistory = (file: any, targetTab: Tab = 'dashboard') => {
-    // We re-process even from history to ensure latest formatting/logic applies
-    const { processedRows, stats, formattedHeaders } = processData(file.headers, file.data);
-    
-    // Re-map rows to ensure they catch any new formatting logic (like smart time)
-    const rows = processedRows.map(r => formattedHeaders.map(h => String(r[h])));
-    const summary = generateDataSummary(formattedHeaders, rows, stats);
-    
-    setData({
-      headers: formattedHeaders,
-      rows,
-      fileName: file.name,
-      stats,
-      summary
-    });
-    setReportName(file.name);
-    setActiveTab(targetTab);
+    try {
+      if (!file?.headers?.length || !file?.data?.length) {
+        console.warn('Archivo de historial inválido o corrupto, ignorando.', file?.name);
+        setError('El archivo seleccionado parece estar corrupto.');
+        return;
+      }
+      // We re-process even from history to ensure latest formatting/logic applies
+      const { processedRows, stats, formattedHeaders } = processData(file.headers, file.data);
+      
+      // Re-map rows to ensure they catch any new formatting logic (like smart time)
+      const rows = processedRows.map(r => formattedHeaders.map(h => String(r[h] ?? '')));
+      const summary = generateDataSummary(formattedHeaders, rows, stats);
+      
+      setData({
+        headers: formattedHeaders,
+        rows,
+        fileName: file.name,
+        stats,
+        summary
+      });
+      setReportName(file.name);
+      setActiveTab(targetTab);
+    } catch (err) {
+      console.error('Error procesando archivo de historial:', err);
+      setError('Error al procesar el archivo seleccionado. El formato podría haber cambiado.');
+    }
   };
 
   const generateAISlides = async (config?: any): Promise<any[]> => {

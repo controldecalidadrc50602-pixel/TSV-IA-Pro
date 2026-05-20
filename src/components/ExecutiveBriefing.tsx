@@ -70,7 +70,7 @@ export function ExecutiveBriefing({ isOpen, onClose, stats, insights }: Executiv
                    <Zap size={12} className="text-amber-500" /> Anomalies Detected
                  </div>
                  <p className="text-xs text-slate-400">
-                   Peak hour at {stats.peakHour?.hour}:00 with {stats.peakHour?.count} sessions.
+                   {stats.peakHour ? `Peak hour at ${stats.peakHour.hour}:00 with ${stats.peakHour.count} sessions.` : 'No peak hour data available.'}
                  </p>
                </div>
             </div>

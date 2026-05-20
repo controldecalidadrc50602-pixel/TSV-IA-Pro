@@ -246,7 +246,14 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       });
     }
 
-    numericStats[key] = { min: Math.min(...values), max: Math.max(...values), sum, mean, cv, anomalies: colAnomalies };
+    numericStats[key] = {
+      min: values.length > 0 ? Math.min(...values) : 0,
+      max: values.length > 0 ? Math.max(...values) : 0,
+      sum,
+      mean: values.length > 0 ? mean : 0,
+      cv,
+      anomalies: colAnomalies
+    };
     
     const prof = columnProfiles.find(p => p.header === key);
     if (prof?.normHeader.includes('duracion') || prof?.normHeader.includes('tiempo')) {
@@ -366,7 +373,9 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       statsByStatus,
       forecast: generateForecast(sessionsByHour),
       rootCauseAnalysis: analyzeRootCauses(anomalies, rows, categoricalProfiles, headers),
-      peakHour: sessionsByHour.reduce((p, c) => (p.count > c.count) ? p : c, sessionsByHour[0]),
+      peakHour: sessionsByHour.length > 0
+        ? sessionsByHour.reduce((p, c) => (p.count > c.count) ? p : c, sessionsByHour[0])
+        : { hour: '00', count: 0 },
       detectedSchema: {
         categorical: categoricalProfiles.map(p => p.header),
         numeric: numericProfiles.map(p => p.header),

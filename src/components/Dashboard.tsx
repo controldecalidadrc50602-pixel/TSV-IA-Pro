@@ -7,6 +7,7 @@ import { DataStats } from '@/lib/data-processor';
 import { Users, Clock, TrendingUp, TrendingDown, Hash, Sparkles, Share2, Globe, LayoutDashboard, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
 interface DashboardProps {
   stats: DataStats;
@@ -200,9 +201,10 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
       </div>
 
       {/* Charts Grid - Fully Dynamic */}
+      <WidgetErrorBoundary>
       <div className="grid grid-cols-12 gap-6">
         {/* Carga Horaria (Si existe) */}
-        {show('hourly') && stats.sessionsByHour.some(h => h.count > 0) && (
+        {show('hourly') && stats.sessionsByHour?.some(h => h.count > 0) && (
           <div className="col-span-12 lg:col-span-8 bg-white dark:bg-dark-card p-6 rounded-[2.5rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px]">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -215,7 +217,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
               </div>
             </div>
             <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
+              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -256,7 +258,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
         )}
 
         {/* Dynamic Categorical Widgets */}
-        {stats.allCategoricalStats.map((cat, idx) => (
+        {(stats.allCategoricalStats ?? []).map((cat, idx) => (
           <div 
             key={cat.header}
             className={cn(
@@ -285,7 +287,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             <div className="flex-1 flex flex-col min-h-0">
                {idx === 0 ? (
                 <div className="flex-1 relative flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
+                    <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                       <PieChart>
                         <Pie 
                           data={cat.data.slice(0, 8)} 
@@ -295,7 +297,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                           onClick={(data) => onFilter?.(cat.header, data.label)}
                           className="cursor-pointer outline-none"
                         >
-                          {cat.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                          {(cat.data ?? []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                         </Pie>
                         <Tooltip />
                       </PieChart>
@@ -306,7 +308,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                     </div>
                  </div>
                ) : (
-                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
+                 <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                     <BarChart layout="vertical" data={cat.data.slice(0, 6)}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
                       <XAxis type="number" hide />
@@ -329,7 +331,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Dominancia</p>
                   <p className="text-xs font-black text-brand-turquoise">
-                    {stats.totalSessions > 0 ? Math.round((cat.data[0]?.count / stats.totalSessions) * 100) : 0}%
+                    {(stats.totalSessions ?? 0) > 0 ? Math.round(((cat.data[0]?.count ?? 0) / stats.totalSessions) * 100) : 0}%
                   </p>
                </div>
             </div>
@@ -350,7 +352,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 relative z-10 w-full lg:w-auto">
-              {stats.allCategoricalStats.slice(0, 2).map((cat, i) => (
+              {(stats.allCategoricalStats ?? []).slice(0, 2).map((cat, i) => (
                 <div key={i} className="text-center lg:text-left border-l border-white/10 pl-6">
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Top {cat.header}</p>
                   <p className="text-sm font-black text-white truncate max-w-[120px]" title={cat.data[0]?.label}>{cat.data[0]?.label || '-'}</p>
@@ -368,6 +370,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
           </div>
         )}
       </div>
+      </WidgetErrorBoundary>
     </div>
   );
 }

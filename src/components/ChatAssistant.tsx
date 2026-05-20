@@ -34,7 +34,17 @@ export function ChatAssistant({ dataSummary, rawStats, onClose, projectId }: Cha
     const cacheKey = `tsv_chat_${projectId || 'default'}`;
     const saved = localStorage.getItem(cacheKey);
     if (saved) {
-      setMessages(JSON.parse(saved));
+      try {
+        setMessages(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem(cacheKey);
+        setMessages([
+          {
+            role: 'model',
+            content: '👋 Hola! Soy tu analista de datos con IA. Puedo responderte con texto **y gráficos** generados en tiempo real. ¿Qué quieres analizar?',
+          }
+        ]);
+      }
     } else {
       setMessages([
         {
@@ -67,20 +77,20 @@ export function ChatAssistant({ dataSummary, rawStats, onClose, projectId }: Cha
   const buildRawData = () => {
     if (!rawStats) return null;
     return {
-      sessionsByChannel: rawStats.sessionsByChannel,
-      statsByTipificacion: rawStats.statsByTipificacion,
-      statsByCola: rawStats.statsByCola,
-      sessionsByHour: rawStats.sessionsByHour,
-      statsByStatus: rawStats.statsByStatus,
-      slaCompliance: rawStats.slaCompliance,
-      botSuccessRate: rawStats.botSuccessRate,
-      efficiencyIndex: rawStats.efficiencyIndex,
-      totalSessions: rawStats.totalSessions,
-      avgDuration: rawStats.avgDuration,
-      peakHour: rawStats.peakHour,
-      totalTransfers: rawStats.totalTransfers,
-      totalResponses: rawStats.totalResponses,
-      dateRange: rawStats.dateRange,
+      sessionsByChannel: rawStats.allCategoricalStats?.find(c => c.header.toLowerCase().includes('canal'))?.data,
+      statsByTipificacion: rawStats.allCategoricalStats?.find(c => c.header.toLowerCase().includes('tipificacion'))?.data,
+      statsByCola: rawStats.allCategoricalStats?.find(c => c.header.toLowerCase().includes('cola'))?.data,
+      sessionsByHour: rawStats.sessionsByHour ?? [],
+      statsByStatus: rawStats.statsByStatus ?? [],
+      slaCompliance: rawStats.slaCompliance ?? 0,
+      botSuccessRate: rawStats.botSuccessRate ?? 0,
+      efficiencyIndex: rawStats.efficiencyIndex ?? 0,
+      totalSessions: rawStats.totalSessions ?? 0,
+      avgDuration: rawStats.avgDuration ?? '-',
+      peakHour: rawStats.peakHour ?? null,
+      totalTransfers: rawStats.totalTransfers ?? 0,
+      totalResponses: rawStats.totalResponses ?? 0,
+      dateRange: rawStats.dateRange ?? 'N/A',
     };
   };
 
