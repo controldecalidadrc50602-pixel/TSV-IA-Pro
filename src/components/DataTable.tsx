@@ -12,7 +12,8 @@ import {
   Download, 
   Filter, 
   RotateCcw,
-  SlidersHorizontal 
+  SlidersHorizontal,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
