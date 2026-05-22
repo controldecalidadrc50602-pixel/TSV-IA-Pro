@@ -485,6 +485,7 @@ export default function App() {
   }
 
   return (
+    <>
       <style dangerouslySetInnerHTML={{__html: `
         body { background-color: #0E1117 !important; color: #FFFFFF !important; margin: 0; padding: 0; font-family: sans-serif; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
