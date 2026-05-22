@@ -103,16 +103,6 @@ export default function App() {
 
   // Handle Theme
   useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-      document.body.style.backgroundColor = '#0E1117';
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-      document.body.style.backgroundColor = '#F0F2F6';
-    }
     localStorage.setItem('tsv_theme', theme);
   }, [theme]);
 
@@ -262,29 +252,12 @@ export default function App() {
   const generateAutoInsights = async (summary: string, stats: DataStats) => {
     setInsightsLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${baseUrl}/api/insights`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary, stats })
-      });
-      
-      if (!response.ok) throw new Error("Server not responding");
-
-      const result = await response.json();
-      setInsightsFindings(result.findings ?? []);
-      setInsightsSummary(result.executiveSummary ?? '');
-      if (result.executiveSummary) {
-        setData(prev => prev ? { ...prev, insights: result.executiveSummary } : null);
-      }
-    } catch (err) {
-      console.warn('AI Server Offline: Utilizando fallback de insights locales.');
-      // Fallback insights locales si el servidor no responde
+      // Local fallback logic only. No external server calls to guarantee Local Mode stability.
       setInsightsFindings([
-        { type: 'trend', title: 'Dataset Procesado', description: 'El sistema ha analizado las sesiones locales correctamente.', value: `${stats.totalSessions}`, action: 'Inicia el servidor de IA para análisis profundo.' },
+        { type: 'trend', title: 'Dataset Procesado', description: 'El sistema ha analizado las sesiones locales correctamente.', value: `${stats.totalSessions}`, action: 'Análisis local activo.' },
         { type: 'achievement', title: 'SLA Detectado', description: 'Nivel de cumplimiento basado en métricas locales.', value: `${stats.slaCompliance?.toFixed(1)}%`, action: 'Monitorear picos horários.' }
       ]);
-      setInsightsSummary("Análisis local completado. Para insights avanzados de IA, asegúrese de que el servidor en el puerto 3001 esté activo.");
+      setInsightsSummary("Análisis local completado exitosamente sin peticiones de red.");
     } finally {
       setInsightsLoading(false);
     }
@@ -411,24 +384,7 @@ export default function App() {
 
   const generateAISlides = async (config?: any): Promise<any[]> => {
     if (!data) return [];
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${baseUrl}/api/slides`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          stats: data.stats, 
-          summary: data.summary,
-          config 
-        })
-      });
-      if (!response.ok) throw new Error('Slides API error');
-      const result = await response.json();
-      return result.slides ?? [];
-    } catch (err) {
-      console.error('AI Slide Generation Failure:', err);
-      throw err;
-    }
+    return []; // No external calls allowed in pure local mode
   };
 
   const handleDeleteHistory = async (id: string, e: React.MouseEvent) => {
@@ -551,7 +507,10 @@ export default function App() {
         />
       )}
 
-      <div className="flex h-screen bg-brand-gray dark:bg-dark-bg overflow-hidden font-sans transition-colors duration-300">
+      <div 
+         className={cn("flex h-screen overflow-hidden font-sans transition-colors duration-300", theme === 'dark' ? 'dark' : '')}
+         style={{ backgroundColor: theme === 'dark' ? '#0E1117' : '#F0F2F6', color: theme === 'dark' ? '#FFFFFF' : '#0F172A' }}
+      >
       {/* Sidebar */}
       <aside 
         className={cn(
@@ -694,25 +653,22 @@ export default function App() {
 
                 <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
                 <button 
                   onClick={handleExportExcel}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-turquoise hover:text-brand-turquoise transition-all text-sm font-medium shadow-sm"
+                  className="px-4 py-2 bg-slate-100 text-slate-800 font-bold rounded-md hover:bg-slate-200 border-none cursor-pointer text-sm"
+                  style={{ minWidth: '120px' }}
                 >
-                  <Download size={18} />
-                  <span className="hidden md:inline">Exportar Premium</span>
+                  EXPORTAR PREMIUM
                 </button>
 
                 <button 
                   onClick={() => setIsChatOpen(!isChatOpen)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-sm font-medium shadow-sm",
-                    isChatOpen 
-                      ? "bg-brand-turquoise/10 border-brand-turquoise text-brand-turquoise" 
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-turquoise/50"
-                  )}
+                  className="px-4 py-2 bg-[#40E0D0] text-white font-bold rounded-md hover:opacity-90 border-none cursor-pointer text-sm"
+                  style={{ minWidth: '120px' }}
                 >
-                  <MessageSquare size={18} />
-                  <span className="hidden md:inline">Asistente IA</span>
+                  ASISTENTE IA
                 </button>
 
                 <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
