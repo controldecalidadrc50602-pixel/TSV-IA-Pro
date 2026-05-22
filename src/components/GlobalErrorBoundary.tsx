@@ -3,6 +3,20 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  // Detectar si es un error de DOM irrecuperable
+  const isDomError = error.message?.includes('removeChild') || 
+                     error.message?.includes('insertBefore') ||
+                     error.message?.includes('not a child');
+
+  const handleReset = () => {
+    if (isDomError) {
+      // Para errores de DOM, forzamos recarga completa para limpiar el árbol corrupto
+      window.location.reload();
+    } else {
+      resetErrorBoundary();
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-6">
       <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-xl w-full border border-red-500/20 text-center">
@@ -19,7 +33,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
         </div>
 
         <button
-          onClick={resetErrorBoundary}
+          onClick={handleReset}
           className="flex items-center gap-2 px-8 py-3 bg-brand-turquoise text-white rounded-xl mx-auto font-bold shadow-lg shadow-brand-turquoise/20 hover:scale-105 transition-transform"
         >
           <RefreshCw size={18} />
@@ -32,7 +46,18 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 
 export function GlobalErrorBoundary({ children }: { children: React.ReactNode }) {
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <ErrorBoundary 
+      FallbackComponent={ErrorFallback}
+      onError={(error: Error) => {
+        // Suprimir errores de DOM no fatales para que no exploten la app
+        const isDomError = error.message?.includes('removeChild') || 
+                           error.message?.includes('insertBefore') ||
+                           error.message?.includes('not a child');
+        if (isDomError) {
+          console.warn('[GlobalErrorBoundary] Intercepted DOM reconciliation error:', error.message);
+        }
+      }}
+    >
       {children}
     </ErrorBoundary>
   );

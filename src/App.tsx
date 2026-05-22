@@ -433,7 +433,7 @@ export default function App() {
     >
       <Icon size={18} className={cn("icon-shadow", active ? "text-white" : "text-slate-400 group-hover:text-brand-dark dark:group-hover:text-white")} />
       {isSidebarOpen && <span>{label}</span>}
-      {active && <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-6 bg-white/20 rounded-r-full" />}
+      {active && <div className="absolute left-0 w-1 h-6 bg-white/20 rounded-r-full" />}
     </button>
   );
 
@@ -488,14 +488,6 @@ export default function App() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
-        body { background-color: #0E1117 !important; color: #FFFFFF !important; margin: 0; padding: 0; font-family: sans-serif; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0E1117; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #40E0D0; }
-      `}} />
-
       {data && (
         <ExecutiveBriefing 
           isOpen={isBriefingOpen}
@@ -506,7 +498,6 @@ export default function App() {
       )}
 
       <div 
-         key={data ? data.fileName : 'app-init'}
          className="flex h-screen overflow-hidden font-sans dark"
          style={{ backgroundColor: '#0E1117', color: '#FFFFFF' }}
       >
