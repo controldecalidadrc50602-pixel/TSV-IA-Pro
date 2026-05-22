@@ -233,7 +233,6 @@ export default function App() {
     if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
       try {
         Papa.parse(file, {
-          delimiter: ext === 'csv' ? ';' : '\t',
           encoding: 'UTF-8',
           skipEmptyLines: true,
           complete: async (results) => {
