@@ -565,13 +565,24 @@ export function extractStructuredData(rawData: any[][]): { headers: string[], ro
     const row = rawData[i];
     if (row && row.length >= Math.max(2, Math.floor(maxCols * 0.8))) {
       const isDashes = row.every(cell => !cell || String(cell).trim() === '-' || String(cell).trim() === '');
+      if (isDashes) continue;
+
+      const nonActiveCells = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '' && String(cell).trim() !== '-');
+      
+      // Si la fila tiene al menos 3 celdas con contenido real o el 50% de las columnas tienen contenido real,
+      // es sumamente probable que sea una cabecera legítima en vez de una celda de metadatos suelta.
+      if (nonActiveCells.length >= Math.min(3, Math.ceil(maxCols * 0.5))) {
+        headerIndex = i;
+        break;
+      }
+
       const firstCell = String(row[0] || '').trim();
       const isMetadata = firstCell.toLowerCase().includes('tiempo') || 
                          firstCell.toLowerCase().includes('fecha') || 
                          firstCell.toLowerCase().includes('comunicación') ||
                          firstCell.toLowerCase().includes('informe');
                          
-      if (!isDashes && !isMetadata) {
+      if (!isMetadata) {
         headerIndex = i;
         break;
       }
