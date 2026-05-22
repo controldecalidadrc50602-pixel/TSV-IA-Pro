@@ -181,6 +181,8 @@ export default function App() {
   };
 
   const processFileContent = async (headers: string[], rawRows: any[][], fileName: string, filter: {column: string, value: string} | null = null) => {
+      // Data sterilization as mandated
+      const stringRows = rawRows.map(row => row.map(cell => String(cell || '').replace(/[^\x20-\x7E]/g, '')));
       setRawFileContent({ headers, rows: rawRows, fileName });
       
       // Filter rows if applicable
@@ -193,13 +195,13 @@ export default function App() {
       }
 
       // Ensure all cells are strings for initial processing
-      const stringRows = filteredRawRows.map(row => row.map(cell => {
+      const cleanStringRows = filteredRawRows.map(row => row.map(cell => {
           if (cell === null || cell === undefined) return '';
-          return String(cell);
+          return String(cell).replace(/[^\x20-\x7E]/g, '');
       }));
 
       // Process Data (Clean, Format Dates, Stats)
-      const { processedRows, stats, formattedHeaders } = processData(headers, stringRows);
+      const { processedRows, stats, formattedHeaders } = processData(headers, cleanStringRows);
       
       // Convert back to string[][] for DataTable (keeping formatting)
       const rows = processedRows.map(r => formattedHeaders.map(h => String(r[h])));
@@ -711,22 +713,18 @@ export default function App() {
               )}
           </AnimatePresence>
 
-          <AnimatePresence mode="wait">
-            {activeTab === 'upload' && (
+          <div style={{ display: activeTab === 'upload' ? 'block' : 'none', height: '100%' }}>
               <motion.div 
-                key="upload"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                className="max-w-2xl mx-auto mt-12"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-4xl mx-auto h-full flex flex-col justify-center animate-in fade-in zoom-in-95 duration-700"
               >
-                <div className="premium-card p-10 text-center">
-                  <div className="w-20 h-20 bg-brand-turquoise/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-brand-turquoise shadow-inner shadow-brand-turquoise/20">
-                    <Database size={40} className="icon-shadow" />
-                  </div>
-                  <h3 className="text-3xl font-black text-slate-800 dark:text-white mb-3 tracking-tighter">Bóveda de Inteligencia</h3>
-                  <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-sm mx-auto font-medium text-sm leading-relaxed">
-                    Sube tus archivos <span className="text-brand-turquoise font-black">.TSV</span>, .CSV o .XLSX para una decodificación forense instantánea.
+                <div className="text-center mb-10">
+                  <h1 className="text-5xl font-black text-brand-dark dark:text-white mb-6 tracking-tight flex items-center justify-center gap-4 drop-shadow-sm">
+                    TSV <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-turquoise to-blue-500">Intelligence</span> Pro
+                  </h1>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto text-lg leading-relaxed">
+                    Sube tu archivo TSV/CSV. La red local analizará las métricas instantáneamente.
                   </p>
                   
                   <div className="relative p-1 bg-slate-50 dark:bg-slate-950/50 rounded-[2.5rem] border border-slate-100 dark:border-white/5">
@@ -750,68 +748,60 @@ export default function App() {
                   )}
                 </div>
               </motion.div>
-            )}
+            </div>
 
-            {activeTab === 'viewer' && data && (
-              <motion.div 
-                key="viewer"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="h-full"
-              >
-                <DataTable 
-                  data={data.rows} 
-                  headers={data.headers} 
-                  fileName={data.fileName}
-                  onReset={() => setActiveTab('upload')}
-                  columnTotals={data.stats.columnTotals}
-                />
-              </motion.div>
-            )}
+            {data && (
+              <>
+                <div style={{ display: activeTab === 'viewer' ? 'block' : 'none', height: '100%' }}>
+                  <DataTable 
+                    data={data.rows} 
+                    headers={data.headers} 
+                    fileName={data.fileName}
+                    onReset={() => setActiveTab('upload')}
+                    columnTotals={data.stats.columnTotals}
+                  />
+                </div>
 
-            {activeTab === 'dashboard' && data && (
-              <motion.div 
-                key="dashboard"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <Dashboard 
+                <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none', height: '100%' }}>
+                  <Dashboard 
+                      stats={data.stats} 
+                      insights={data.insights} 
+                      currentFilter={globalFilter}
+                      onFilter={handleApplyFilter}
+                      onShare={async () => {
+                          setIsLoading(true);
+                          try {
+                              const name = reportName || data.fileName.split('.')[0] || 'Reporte';
+                              const id = await savePublicShare(name, data.stats, data.summary, activeProject?.brand_color);
+                              window.open(`${window.location.origin}${window.location.pathname}#/share/${id}`, '_blank');
+                          } catch (e) {
+                              console.error("Error sharing", e);
+                              alert("No se pudo generar el enlace público.");
+                          } finally {
+                              setIsLoading(false);
+                          }
+                      }}
+                  />
+                </div>
+
+                <div style={{ display: activeTab === 'analytics' ? 'block' : 'none', height: '100%' }}>
+                  <AnalyticsPanel stats={data.stats} />
+                </div>
+
+                <div style={{ display: activeTab === 'presentation' ? 'block' : 'none', height: '100%' }}>
+                  <PresentationMode 
                     stats={data.stats} 
                     insights={data.insights} 
-                    currentFilter={globalFilter}
-                    onFilter={handleApplyFilter}
-                    onShare={async () => {
-                        setIsLoading(true);
-                        try {
-                            const name = reportName || data.fileName.split('.')[0] || 'Reporte';
-                            const id = await savePublicShare(name, data.stats, data.summary, activeProject?.brand_color);
-                            window.open(`${window.location.origin}${window.location.pathname}#/share/${id}`, '_blank');
-                        } catch (e) {
-                            console.error("Error sharing", e);
-                            alert("No se pudo generar el enlace público.");
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    }}
-                />
-              </motion.div>
+                    onBack={() => setActiveTab('dashboard')}
+                    logo={logo}
+                    onGenerateSlides={generateAISlides}
+                  />
+                </div>
+              </>
             )}
 
-            {activeTab === 'analytics' && data && (
-              <motion.div
-                key="analytics"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-              >
-                <AnalyticsPanel stats={data.stats} />
-              </motion.div>
-            )}
-
-            {activeTab === 'analytics' && !data && (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            {!data && (
+              <div style={{ display: activeTab === 'analytics' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
                 <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
                   <FlaskConical size={40} className="opacity-40" />
                 </div>
@@ -826,27 +816,8 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'presentation' && data && (
+            <div style={{ display: activeTab === 'settings' ? 'block' : 'none', height: '100%' }}>
               <motion.div 
-                key="presentation"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="h-full"
-              >
-                <PresentationMode 
-                  stats={data.stats} 
-                  insights={data.insights} 
-                  onBack={() => setActiveTab('dashboard')}
-                  logo={logo}
-                  onGenerateSlides={generateAISlides}
-                />
-              </motion.div>
-            )}
-
-            {activeTab === 'settings' && (
-              <motion.div 
-                key="settings"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -916,9 +887,9 @@ export default function App() {
                   </div>
                 </div>
               </motion.div>
-            )}
+            </div>
 
-            {activeTab === 'history' && (
+            <div style={{ display: activeTab === 'history' ? 'block' : 'none', height: '100%' }}>
               <motion.div 
                 key="history"
                 initial={{ opacity: 0, y: 20 }}
@@ -1009,11 +980,11 @@ export default function App() {
                   )}
                 </div>
               </motion.div>
-            )}
+            </div>
             
             {/* Empty States for Viewer/Dashboard if no data */}
-            {(!data && (activeTab === 'viewer' || activeTab === 'dashboard')) && (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            {!data && (
+              <div style={{ display: (activeTab === 'viewer' || activeTab === 'dashboard') ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>
                 <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
                   <UploadCloud size={40} className="opacity-40" />
                 </div>
@@ -1027,7 +998,7 @@ export default function App() {
                 </button>
               </div>
             )}
-          </AnimatePresence>
+
         </div>
 
         {/* Chat Overlay */}
