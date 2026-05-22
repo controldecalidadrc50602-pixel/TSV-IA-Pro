@@ -9,7 +9,7 @@ import { AnalyticsPanel } from '@/components/AnalyticsPanel';
 import { ChatAssistant } from '@/components/ChatAssistant';
 import { InsightsBar, Finding } from '@/components/InsightsBar';
 import { PublicDashboard } from '@/components/PublicDashboard';
-import { processData, generateDataSummary, DataStats } from '@/lib/data-processor';
+import { processData, generateDataSummary, DataStats, extractStructuredData } from '@/lib/data-processor';
 import { saveFile, getFiles, deleteFile, savePublicShare } from '@/lib/storage';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -230,34 +230,8 @@ export default function App() {
 
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
-      try {
-        Papa.parse(file, {
-          encoding: 'UTF-8',
-          skipEmptyLines: true,
-          complete: async (results) => {
-            const rawData = results.data as string[][];
-            if (!rawData || rawData.length === 0) {
-                setError("The file appears to be empty.");
-                setIsLoading(false);
-                return;
-            }
-            const headers = rawData[0];
-            // Skip the description row at index 1
-            const rawRows = rawData.length > 2 ? rawData.slice(2) : [];
-            setPendingData({ headers, rows: rawRows, fileName: file.name });
-            setIsLoading(false);
-          },
-          error: (err) => {
-            setError(`Error parsing file: ${err.message}`);
-            setIsLoading(false);
-          }
-        });
-      } catch (err: any) {
-        setError(`Fatal error parsing file: ${err.message}`);
-        setIsLoading(false);
-      }
-    } else if (ext === 'xlsx' || ext === 'xls') {
+    // Detección automática del motor de parseo: Excel para .xlsx/.xls, PapaParse autodetectado para cualquier otro
+    if (ext === 'xlsx' || ext === 'xls') {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
@@ -265,27 +239,66 @@ export default function App() {
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
                 
                 if (!jsonData || jsonData.length === 0) {
-                    setError("The file appears to be empty.");
+                    setError("El archivo de Excel parece estar vacío.");
                     setIsLoading(false);
                     return;
                 }
 
-                const headers = jsonData[0] as string[];
-                const rawRows = jsonData.slice(1) as any[][];
+                // Curaduría inteligente de metadatos/encabezados basura
+                const { headers, rows: rawRows } = extractStructuredData(jsonData);
+                
+                if (headers.length === 0) {
+                    setError("No se pudieron identificar columnas estructuradas en el archivo de Excel.");
+                    setIsLoading(false);
+                    return;
+                }
+
                 setPendingData({ headers, rows: rawRows, fileName: file.name });
                 setIsLoading(false);
             } catch (err) {
-                setError(`Error parsing Excel file: ${err}`);
+                setError(`Error al procesar el archivo Excel: ${err}`);
                 setIsLoading(false);
             }
         };
         reader.readAsArrayBuffer(file);
     } else {
-        setError("Unsupported file format.");
+      // Intentar procesar como archivo delimitado (CSV, TSV, TXT, LOG, etc.) con autodetección dinámica
+      try {
+        Papa.parse(file, {
+          encoding: 'UTF-8',
+          skipEmptyLines: true,
+          complete: async (results) => {
+            const rawData = results.data as string[][];
+            if (!rawData || rawData.length === 0) {
+                setError("El archivo parece estar vacío o no es legible.");
+                setIsLoading(false);
+                return;
+            }
+            
+            // Curaduría inteligente de metadatos/encabezados basura
+            const { headers, rows: rawRows } = extractStructuredData(rawData);
+            
+            if (headers.length === 0) {
+                setError("No se pudieron identificar columnas estructuradas en el archivo.");
+                setIsLoading(false);
+                return;
+            }
+
+            setPendingData({ headers, rows: rawRows, fileName: file.name });
+            setIsLoading(false);
+          },
+          error: (err) => {
+            setError(`Error al analizar el archivo estructurado: ${err.message}`);
+            setIsLoading(false);
+          }
+        });
+      } catch (err: any) {
+        setError(`Error crítico al procesar el archivo: ${err.message}`);
         setIsLoading(false);
+      }
     }
   };
 

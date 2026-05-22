@@ -546,3 +546,44 @@ function analyzeRootCauses(anomalies: any[], rows: string[][], categoricalProfil
 
   return causeAnalysis;
 }
+
+/**
+ * Heuristically identifies the actual column header row and filters out metadata and empty lines,
+ * providing structured headers and rows for any CSV, TSV, TXT, or Excel file.
+ */
+export function extractStructuredData(rawData: any[][]): { headers: string[], rows: any[][] } {
+  if (!rawData || rawData.length === 0) return { headers: [], rows: [] };
+
+  // 1. Encontrar el número máximo de columnas en cualquier fila
+  const colCounts = rawData.map(r => Array.isArray(r) ? r.length : 0);
+  const maxCols = Math.max(...colCounts);
+
+  // 2. Buscar la primera fila que tenga al menos el 80% del número máximo de columnas
+  // y que no parezca una fila de metadatos o vacía
+  let headerIndex = 0;
+  for (let i = 0; i < rawData.length; i++) {
+    const row = rawData[i];
+    if (row && row.length >= Math.max(2, Math.floor(maxCols * 0.8))) {
+      const isDashes = row.every(cell => !cell || String(cell).trim() === '-' || String(cell).trim() === '');
+      const firstCell = String(row[0] || '').trim();
+      const isMetadata = firstCell.toLowerCase().includes('tiempo') || 
+                         firstCell.toLowerCase().includes('fecha') || 
+                         firstCell.toLowerCase().includes('comunicación') ||
+                         firstCell.toLowerCase().includes('informe');
+                         
+      if (!isDashes && !isMetadata) {
+        headerIndex = i;
+        break;
+      }
+    }
+  }
+
+  const headers = rawData[headerIndex].map(h => String(h || '').trim());
+  const rows = rawData.slice(headerIndex + 1).filter(row => {
+    if (!row || row.length === 0) return false;
+    return !row.every(cell => !cell || String(cell).trim() === '-' || String(cell).trim() === '');
+  });
+
+  return { headers, rows };
+}
+
