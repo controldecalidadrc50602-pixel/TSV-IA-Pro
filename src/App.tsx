@@ -42,7 +42,6 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('upload');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [data, setData] = useState<ParsedData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,18 +100,7 @@ export default function App() {
     if (logo) localStorage.setItem('tsv_logo', logo);
   }, [logo]);
 
-  // Handle Theme
-  useEffect(() => {
-    localStorage.setItem('tsv_theme', theme);
-  }, [theme]);
 
-  // Set initial theme from storage or meta
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('tsv_theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
 
   // Handle Auth Session
   useEffect(() => {
@@ -497,7 +485,14 @@ export default function App() {
   }
 
   return (
-    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        body { background-color: #0E1117 !important; color: #FFFFFF !important; margin: 0; padding: 0; font-family: sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0E1117; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #40E0D0; }
+      `}} />
+
       {data && (
         <ExecutiveBriefing 
           isOpen={isBriefingOpen}
@@ -508,8 +503,9 @@ export default function App() {
       )}
 
       <div 
-         className={cn("flex h-screen overflow-hidden font-sans transition-colors duration-300", theme === 'dark' ? 'dark' : '')}
-         style={{ backgroundColor: theme === 'dark' ? '#0E1117' : '#F0F2F6', color: theme === 'dark' ? '#FFFFFF' : '#0F172A' }}
+         key={data ? data.fileName : 'app-init'}
+         className="flex h-screen overflow-hidden font-sans dark"
+         style={{ backgroundColor: '#0E1117', color: '#FFFFFF' }}
       >
       {/* Sidebar */}
       <aside 
@@ -598,18 +594,7 @@ export default function App() {
           )}
           
           <div className="flex flex-col gap-1">
-            <button
-                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                className={cn(
-                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-brand-turquoise/10 hover:text-brand-turquoise transition-colors text-sm font-medium",
-                !isSidebarOpen && "justify-center px-0"
-                )}
-            >
-                <span className="flex items-center justify-center text-lg">
-                  {theme === 'light' ? '🌙' : '☀️'}
-                </span>
-                {isSidebarOpen && <span>{theme === 'light' ? "Modo Oscuro" : "Modo Claro"}</span>}
-            </button>
+
             
              <button
                  onClick={handleSignOut}
