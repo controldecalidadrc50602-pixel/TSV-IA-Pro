@@ -1,4 +1,5 @@
-import { supabase, isCloudEnabled } from './supabase';
+import { db, auth, isCloudEnabled } from './firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy, getDoc, setDoc } from 'firebase/firestore';
 import { openDB } from 'idb';
 import { DataStats } from './data-processor';
 
@@ -26,38 +27,34 @@ async function initLocalDB() {
 }
 
 export async function saveSchemaMapping(hash: string, mapping: Record<string, string>) {
-  const db = await initLocalDB();
-  await db.put(SCHEMA_STORE, { hash, mapping, lastUsed: new Date() });
+  const localDb = await initLocalDB();
+  await localDb.put(SCHEMA_STORE, { hash, mapping, lastUsed: new Date() });
 }
 
 export async function getSchemaMapping(hash: string) {
-  const db = await initLocalDB();
-  return db.get(SCHEMA_STORE, hash);
+  const localDb = await initLocalDB();
+  return localDb.get(SCHEMA_STORE, hash);
 }
 
 export async function saveFile(name: string, headers: string[], data: any[][], projectId?: string) {
   if (isCloudEnabled) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) throw new Error("No authenticated user");
 
-    const { data: savedReport, error } = await supabase
-      .from('reports')
-      .insert([{
-        name,
-        headers,
-        data,
-        user_id: user.id,
-        project_id: projectId
-      }])
-      .select()
-      .single();
+    const docRef = await addDoc(collection(db, 'reports'), {
+      name,
+      headers,
+      data,
+      user_id: user.uid,
+      project_id: projectId || null,
+      created_at: new Date().toISOString()
+    });
 
-    if (error) throw error;
-    return savedReport.id;
+    return docRef.id;
   } else {
-    const db = await initLocalDB();
+    const localDb = await initLocalDB();
     const id = crypto.randomUUID();
-    await db.put(STORE_NAME, {
+    await localDb.put(STORE_NAME, {
       id,
       name,
       date: new Date(),
@@ -71,30 +68,36 @@ export async function saveFile(name: string, headers: string[], data: any[][], p
 
 export async function getFiles(projectId?: string) {
   if (isCloudEnabled) {
-    let query = supabase
-      .from('reports')
-      .select('*');
+    const user = auth.currentUser;
+    if (!user) return [];
+
+    let q = query(
+      collection(db, 'reports'),
+      where('user_id', '==', user.uid)
+    );
     
     if (projectId) {
-      query = query.eq('project_id', projectId);
+      q = query(q, where('project_id', '==', projectId));
     } else {
-      query = query.is('project_id', null);
+      q = query(q, where('project_id', '==', null));
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Error fetching files from Supabase", error);
+    try {
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: new Date(doc.data().created_at)
+      }));
+      // Sort in JS to avoid complex Firestore composite indexes during setup
+      return data.sort((a: any, b: any) => b.date.getTime() - a.date.getTime());
+    } catch (error) {
+      console.error("Error fetching files from Firebase", error);
       return [];
     }
-    
-    return data.map(report => ({
-      ...report,
-      date: new Date(report.created_at)
-    }));
   } else {
-    const db = await initLocalDB();
-    const all = await db.getAllFromIndex(STORE_NAME, 'by-date');
+    const localDb = await initLocalDB();
+    const all = await localDb.getAllFromIndex(STORE_NAME, 'by-date');
     if (projectId) {
       return all.filter((f: any) => f.project_id === projectId);
     }
@@ -104,15 +107,10 @@ export async function getFiles(projectId?: string) {
 
 export async function deleteFile(id: string) {
   if (isCloudEnabled) {
-    const { error } = await supabase
-      .from('reports')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await deleteDoc(doc(db, 'reports', id));
   } else {
-    const db = await initLocalDB();
-    return db.delete(STORE_NAME, id);
+    const localDb = await initLocalDB();
+    return localDb.delete(STORE_NAME, id);
   }
 }
 
@@ -126,19 +124,20 @@ export async function savePublicShare(reportName: string, stats: DataStats, summ
     stats,
     summary,
     brandColor,
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   };
 
   if (isCloudEnabled) {
-    const { error } = await supabase.from('public_shares').insert([shareData]);
-    if (error) {
+    try {
+      await setDoc(doc(db, 'public_shares', id), shareData);
+    } catch (error) {
       console.warn("Error saving to public_shares table, falling back to localStorage", error);
       localStorage.setItem(`tsv_share_${id}`, JSON.stringify(shareData));
     }
   } else {
     // Guardar en IndexedDB local
-    const db = await initLocalDB();
-    await db.put(SHARE_STORE, shareData);
+    const localDb = await initLocalDB();
+    await localDb.put(SHARE_STORE, shareData);
   }
 
   return id;
@@ -146,13 +145,16 @@ export async function savePublicShare(reportName: string, stats: DataStats, summ
 
 export async function getPublicShare(id: string): Promise<any> {
   if (isCloudEnabled) {
-    const { data, error } = await supabase.from('public_shares').select('*').eq('id', id).single();
-    if (!error && data) return data;
+    try {
+      const docSnap = await getDoc(doc(db, 'public_shares', id));
+      if (docSnap.exists()) return docSnap.data();
+    } catch (err) {}
+    
     const local = localStorage.getItem(`tsv_share_${id}`);
     if (local) return JSON.parse(local);
     return null;
   } else {
-    const db = await initLocalDB();
-    return db.get(SHARE_STORE, id);
+    const localDb = await initLocalDB();
+    return localDb.get(SHARE_STORE, id);
   }
 }

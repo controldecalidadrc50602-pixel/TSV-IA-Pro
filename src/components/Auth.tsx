@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { auth, googleProvider } from '@/lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, UserPlus, Mail, Lock, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isCloudEnabled } from '@/lib/firebase';
 
 export function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,12 +20,10 @@ export function Auth() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        alert("¡Registro exitoso! Por favor revisa tu correo para confirmar (si está activado).");
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert("¡Registro exitoso! Ya puedes iniciar sesión.");
       }
     } catch (err: any) {
       setError(err.message || "Error en la autenticación");
@@ -101,7 +101,7 @@ export function Auth() {
             )}
           </AnimatePresence>
 
-          {!supabase && (
+          {!isCloudEnabled && (
             <button 
               type="button"
               onClick={() => {
@@ -115,7 +115,7 @@ export function Auth() {
             </button>
           )}
 
-          {supabase && (
+          {isCloudEnabled && (
             <button 
               type="submit"
               disabled={loading}
@@ -146,14 +146,13 @@ export function Auth() {
             type="button"
             onClick={async () => {
               setLoading(true);
-              const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                  redirectTo: window.location.origin
-                }
-              });
-              if (error) setError(error.message);
-              setLoading(false);
+              try {
+                await signInWithPopup(auth, googleProvider);
+              } catch (error: any) {
+                setError(error.message);
+              } finally {
+                setLoading(false);
+              }
             }}
             className="w-full bg-slate-800/40 hover:bg-slate-800/60 text-white font-bold py-4 rounded-2xl border border-white/5 transition-all flex items-center justify-center gap-3 group"
           >
@@ -181,7 +180,7 @@ export function Auth() {
       </motion.div>
       
       <div className="absolute bottom-8 text-slate-700 text-[9px] font-black uppercase tracking-[0.4em]">
-        TSV Elite Intelligence Platform v3.0 — Secured By Supabase
+        TSV Elite Intelligence Platform v3.0 — Secured By Firebase
       </div>
     </div>
   );

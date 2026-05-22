@@ -94,33 +94,54 @@ export function DataTable({ data, headers, fileName, onReset, columnTotals }: Da
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
-      <div style={{ padding: '16px', backgroundColor: '#1E293B', color: 'white', marginBottom: '16px' }}>
-        <h2>{fileName}</h2>
-        <button onClick={onReset} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+    <div className="w-full h-full overflow-auto p-6">
+      <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">{fileName}</h2>
+        <button 
+          onClick={onReset} 
+          className="px-4 py-2 bg-brand-turquoise text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-turquoise/20 hover:scale-105 transition-transform"
+        >
           Volver a Cargar
         </button>
       </div>
-      <table border={1} cellPadding={8} style={{ width: '100%', borderCollapse: 'collapse', color: 'white' }}>
-        <thead>
-          <tr>
-            {headers.map((h, i) => <th key={i}>{h}</th>)}
-          </tr>
-          {columnTotals && (
-            <tr style={{ backgroundColor: '#0f172a' }}>
-              {headers.map((h, i) => <td key={i}><strong>{columnTotals[h] || '-'}</strong></td>)}
-            </tr>
-          )}
-        </thead>
-        <tbody>
-          {data.slice(0, 50).map((row, rIdx) => (
-            <tr key={rIdx}>
-              {row.map((cell, cIdx) => <td key={cIdx}>{cell}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p style={{ color: '#94a3b8', padding: '16px' }}>Mostrando los primeros 50 registros por simplicidad y rendimiento.</p>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-200 dark:border-slate-800">
+                {headers.map((h, i) => (
+                  <th key={i} className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+              {columnTotals && (
+                <tr className="bg-brand-turquoise/5 border-b border-slate-200 dark:border-slate-800">
+                  {headers.map((h, i) => (
+                    <td key={i} className="p-4 text-sm font-black text-brand-turquoise whitespace-nowrap">
+                      {columnTotals[h] || '-'}
+                    </td>
+                  ))}
+                </tr>
+              )}
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {data.slice(0, 50).map((row, rIdx) => (
+                <tr key={rIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  {row.map((cell, cIdx) => (
+                    <td key={cIdx} className="p-4 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mt-4 italic">
+        Mostrando los primeros 50 registros por simplicidad y rendimiento.
+      </p>
     </div>
   );
 }

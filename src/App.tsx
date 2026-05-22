@@ -25,7 +25,7 @@ import { Auth } from '@/components/Auth';
 import { ProjectManager, Project } from '@/components/ProjectManager';
 import { ExecutiveBriefing } from '@/components/ExecutiveBriefing';
 import { DataSelector } from '@/components/DataSelector';
-import { Session } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ParsedData {
   headers: string[];
@@ -39,8 +39,7 @@ interface ParsedData {
 type Tab = 'upload' | 'viewer' | 'dashboard' | 'analytics' | 'history' | 'presentation' | 'settings';
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('upload');
   const [data, setData] = useState<ParsedData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,17 +62,15 @@ export default function App() {
 
   const handleSignOut = async () => {
     try {
-      if (isCloudEnabled && supabase) {
-        await supabase.auth.signOut();
+      if (isCloudEnabled) {
+        await logout();
       }
     } catch (err) {
       console.error("Error during sign out", err);
     }
     // Deep Clean All States
-    localStorage.removeItem('sb-bammnxoagqskukktddhl-auth-token');
     localStorage.removeItem('tsv_mock_session');
     localStorage.removeItem('tsv_session_active');
-    setSession(null);
     setData(null);
     setActiveProject(null);
     setHistoryFiles([]);
@@ -102,37 +99,11 @@ export default function App() {
 
 
 
-  // Handle Auth Session
-  useEffect(() => {
-    // 1. Check for Mock Session (Local Mode)
-    const isMock = localStorage.getItem('tsv_mock_session') === 'true';
-    if (isMock && !isCloudEnabled) {
-      setSession({
-        user: { email: 'admin@local.pro', id: 'local-admin-uuid' },
-        access_token: 'mock-token',
-        expires_at: 9999999999
-      } as any);
-      setAuthLoading(false);
-      return;
-    }
-
-    // 2. Real Auth (Cloud Mode)
-    if (!isCloudEnabled) {
-      setAuthLoading(false);
-      return;
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  // Handle Mock Session for Local Mode directly in App since it's UI state
+  const isMock = localStorage.getItem('tsv_mock_session') === 'true';
+  const effectiveUser = (!isCloudEnabled && isMock) 
+    ? { email: 'admin@local.pro', id: 'local-admin-uuid' } 
+    : user;
 
   // Apply Brand Color from Project
   useEffect(() => {
@@ -153,14 +124,14 @@ export default function App() {
 
   // Load history and sync data when session or project changes
   useEffect(() => {
-    if (session) {
+    if (effectiveUser) {
       loadHistory();
       // If we change project, we should reset current view to latest report of that project
       if (activeProject) {
           setData(null); // Clear previous project data briefly
       }
     }
-  }, [session, activeProject?.id]);
+  }, [effectiveUser, activeProject?.id]);
 
   const loadHistory = async () => {
     try {
@@ -263,7 +234,7 @@ export default function App() {
       try {
         Papa.parse(file, {
           delimiter: ext === 'csv' ? ';' : '\t',
-          encoding: 'ISO-8859-1',
+          encoding: 'UTF-8',
           skipEmptyLines: true,
           complete: async (results) => {
             const rawData = results.data as string[][];
@@ -478,7 +449,7 @@ export default function App() {
     );
   }
 
-  if (!session && !publicShareId) {
+  if (!effectiveUser && !publicShareId) {
     return <Auth />;
   }
 
@@ -574,11 +545,11 @@ export default function App() {
           {isSidebarOpen && (
             <div className="flex items-center gap-3 px-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
-                {session?.user?.email?.substring(0, 2).toUpperCase() || 'AD'}
+                {effectiveUser?.email?.substring(0, 2).toUpperCase() || 'AD'}
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                  {session?.user?.email || 'Admin User'}
+                  {effectiveUser?.email || 'Admin User'}
                 </span>
                 <span className="text-[10px] text-brand-turquoise font-bold uppercase tracking-tighter truncate">
                   {activeProject?.name || 'Personal Workspace'}

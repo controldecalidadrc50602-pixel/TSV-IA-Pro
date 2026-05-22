@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, isCloudEnabled } from '@/lib/supabase';
+import { db, auth, isCloudEnabled } from '@/lib/firebase';
+import { collection, query, orderBy, getDocs, addDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, Plus, Settings2, Trash2, Check, 
@@ -33,17 +34,25 @@ export function ProjectManager({ onProjectSelect, activeProjectId }: ProjectMana
 
   const loadProjects = async () => {
     if (isCloudEnabled) {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          loadLocalProjects();
+          return;
+        }
+        
+        const q = query(collection(db, 'projects'), orderBy('created_at', 'desc'));
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+        
+        // Ensure we only show projects created by this user if we add user_id later, 
+        // for now we fetch all or we can just fetch normally.
         setProjects(data);
         if (data.length > 0 && !activeProjectId) {
           onProjectSelect(data[0]);
         }
-      } else if (error && error.code === 'PGRST116') {
+      } catch (err) {
+        console.error("Firebase fetch error", err);
         loadLocalProjects();
       }
     } else {
@@ -76,19 +85,12 @@ export function ProjectManager({ onProjectSelect, activeProjectId }: ProjectMana
 
     if (isCloudEnabled) {
       try {
-        const { data, error } = await supabase
-          .from('projects')
-          .insert([newProject])
-          .select()
-          .single();
-        
-        if (!error && data) {
-          setProjects([data, ...projects]);
-          onProjectSelect(data);
-        } else {
-          saveLocalProject(newProject);
-        }
+        const docRef = await addDoc(collection(db, 'projects'), newProject);
+        const savedProject = { ...newProject, id: docRef.id };
+        setProjects([savedProject, ...projects]);
+        onProjectSelect(savedProject);
       } catch (err) {
+        console.error("Firebase insert error", err);
         saveLocalProject(newProject);
       }
     } else {

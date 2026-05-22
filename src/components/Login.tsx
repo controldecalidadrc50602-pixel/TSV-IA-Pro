@@ -1,65 +1,28 @@
-import React, { useState } from 'react';
-import { User, Lock, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { ShieldAlert, LogIn } from 'lucide-react';
 
-interface LoginProps {
-  onLogin: () => void;
-}
-
-export function Login({ onLogin }: LoginProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulated login
-    if (email && password) {
-      onLogin();
-    }
-  };
+export function Login() {
+  const { signInWithGoogle } = useAuth();
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-      <div className="w-16 h-16 bg-brand-turquoise/20 rounded-2xl flex items-center justify-center mb-6 text-brand-turquoise">
-        <Lock size={32} />
-      </div>
-      <h2 className="text-2xl font-bold text-brand-dark dark:text-white mb-2">Bienvenido</h2>
-      <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">Accede a TSV Intelligence Pro</p>
-
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-        <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="email"
-            placeholder="Usuario / Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-xl focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 transition-all text-sm dark:text-white"
-            required
-          />
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 text-center max-w-md w-full">
+        <div className="w-20 h-20 bg-brand-turquoise/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <ShieldAlert size={40} className="text-brand-turquoise" />
         </div>
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-xl focus:outline-none focus:border-brand-turquoise focus:ring-2 focus:ring-brand-turquoise/20 transition-all text-sm dark:text-white"
-            required
-          />
-        </div>
+        <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Acceso Protegido</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-8">
+          Inicia sesión de forma segura para acceder a la Bóveda de Reportes y guardar en la nube.
+        </p>
         <button
-          type="submit"
-          className="w-full bg-brand-turquoise hover:brightness-95 text-brand-dark font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-4 shadow-lg shadow-brand-turquoise/20"
+          onClick={signInWithGoogle}
+          className="w-full py-3 px-4 bg-brand-dark hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-3 transition-colors shadow-lg shadow-slate-200 dark:shadow-none"
         >
-          <span>Iniciar Sesión</span>
-          <ArrowRight size={18} />
+          <LogIn size={20} />
+          Continuar con Google
         </button>
-      </form>
-      
-      <p className="mt-8 text-xs text-slate-400">
-        Versión Demo Empresarial v1.0
-      </p>
+      </div>
     </div>
   );
 }
