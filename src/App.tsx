@@ -20,7 +20,7 @@ import {
   Sparkles, ShieldCheck, FlaskConical, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase, isCloudEnabled } from '@/lib/supabase';
+import { isCloudEnabled } from '@/lib/firebase';
 import { Auth } from '@/components/Auth';
 import { ProjectManager, Project } from '@/components/ProjectManager';
 import { ExecutiveBriefing } from '@/components/ExecutiveBriefing';
