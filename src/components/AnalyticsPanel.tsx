@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
   BarChart, Bar, LineChart, Line, ScatterChart, Scatter,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip,
   Cell, Legend, ReferenceLine
 } from 'recharts';
+import { SafeChartWrapper as ResponsiveContainer } from './SafeChartWrapper';
 import {
   TrendingUp, TrendingDown, AlertTriangle, Activity,
   Filter, BarChart2, Sigma, Zap, ChevronDown, Info

@@ -2,8 +2,9 @@ import React from 'react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend
+  Legend
 } from 'recharts';
+import { SafeChartWrapper as ResponsiveContainer } from './SafeChartWrapper';
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
 export interface ChartConfig {
@@ -110,8 +111,8 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         {title && (
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{title}</p>
         )}
-        <div className="h-[200px] w-full">
-          <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
+        <div className="h-[200px] w-full min-w-[10px] min-h-[10px]">
+          <ResponsiveContainer key={`chart-${title}-${data?.length || 0}`} width="100%" height="100%">
             {renderChart() as React.ReactElement}
           </ResponsiveContainer>
         </div>

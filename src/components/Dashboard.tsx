@@ -1,8 +1,9 @@
 import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
+import { SafeChartWrapper as ResponsiveContainer } from './SafeChartWrapper';
 import { DataStats } from '@/lib/data-processor';
 import { Users, Clock, TrendingUp, TrendingDown, Hash, Sparkles, Share2, Globe, LayoutDashboard, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -209,7 +210,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             </div>
             <div className="flex-1 min-h-0">
               {stats.sessionsByHour?.some(h => h.count > 0) ? (
-                <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer key={`hourly-${stats.totalSessions || 0}`} width="100%" height="100%">
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                     <XAxis dataKey="hour" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} dy={8} />
@@ -276,7 +277,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
             <div className="flex-1 flex flex-col min-h-0">
                {isPie ? (
                 <div className="flex-1 relative flex items-center justify-center">
-                    <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
+                    <ResponsiveContainer key={`pie-${cat.header}-${stats.totalSessions || 0}`} width="100%" height="100%">
                       <PieChart>
                         <Pie 
                           isAnimationActive={false}
@@ -298,7 +299,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                     </div>
                  </div>
                ) : (
-                 <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
+                 <ResponsiveContainer key={`bar-${cat.header}-${stats.totalSessions || 0}`} width="100%" height="100%">
                     <BarChart layout="vertical" data={(cat.data || []).slice(0, 6)}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
                       <XAxis type="number" hide />

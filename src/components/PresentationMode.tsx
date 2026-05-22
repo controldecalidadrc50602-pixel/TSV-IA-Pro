@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
+import { SafeChartWrapper as ResponsiveContainer } from './SafeChartWrapper';
 import { DataStats } from '@/lib/data-processor';
 import { cn } from '@/lib/utils';
 import pptxgen from 'pptxgenjs';
