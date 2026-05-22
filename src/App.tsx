@@ -610,11 +610,7 @@ export default function App() {
         <header className="h-20 bg-white dark:bg-dark-card border-b border-slate-200 dark:border-dark-border flex items-center justify-between px-8 z-10 sticky top-0 transition-colors duration-300">
           <div>
             <h2 className="text-xl font-bold text-brand-dark dark:text-white">
-              {activeTab === 'upload' && 'Nueva Lectura'}
-              {activeTab === 'viewer' && 'Explorador de Datos'}
-              {activeTab === 'dashboard' && 'Dashboard Ejecutivo'}
-              {activeTab === 'analytics' && 'Estadísticas Avanzadas'}
-              {activeTab === 'history' && 'Bóveda de Reportes'}
+              {{ upload: 'Nueva Lectura', viewer: 'Explorador de Datos', dashboard: 'Dashboard Ejecutivo', analytics: 'Estadísticas Avanzadas', history: 'Bóveda de Reportes', presentation: 'Modo Presentación', settings: 'Configuración' }[activeTab]}
             </h2>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Gestión Inteligente de Datos TSV</p>
           </div>
@@ -753,7 +749,7 @@ export default function App() {
                   />
                 </div>
 
-                <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none', height: '100%' }}>
+                {activeTab === 'dashboard' && (
                   <Dashboard 
                       stats={data.stats} 
                       insights={data.insights} 
@@ -773,13 +769,13 @@ export default function App() {
                           }
                       }}
                   />
-                </div>
+                )}
 
-                <div style={{ display: activeTab === 'analytics' ? 'block' : 'none', height: '100%' }}>
+                {activeTab === 'analytics' && (
                   <AnalyticsPanel stats={data.stats} />
-                </div>
+                )}
 
-                <div style={{ display: activeTab === 'presentation' ? 'block' : 'none', height: '100%' }}>
+                {activeTab === 'presentation' && (
                   <PresentationMode 
                     stats={data.stats} 
                     insights={data.insights} 
@@ -787,7 +783,7 @@ export default function App() {
                     logo={logo}
                     onGenerateSlides={generateAISlides}
                   />
-                </div>
+                )}
               </>
             )}
 
