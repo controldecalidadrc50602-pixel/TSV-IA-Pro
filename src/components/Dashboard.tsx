@@ -19,7 +19,7 @@ interface DashboardProps {
   activeWidgets?: string[];
 }
 
-const COLORS = ['#0D9488', '#0F172A', '#2DD4BF', '#14B8A6', '#065F46', '#CCFBF1', '#6366F1', '#8B5CF6'];
+const COLORS = ['#40E0D0', '#333333', '#40E0D0', '#4A4A4A', '#525252', '#2B2B2B', '#40E0D0', '#8B5CF6'];
 
 const KpiCard = ({ icon: Icon, label, value, color, delay, trend, status }: any) => (
   <motion.div
@@ -192,64 +192,62 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
       {/* Charts Grid - Fully Dynamic */}
       <WidgetErrorBoundary>
       <div className="grid grid-cols-12 gap-6">
-        {/* Carga Horaria (Si existe) */}
-        {show('hourly') && stats.sessionsByHour?.some(h => h.count > 0) && (
+        {/* Carga Horaria */}
+        {show('hourly') && (
           <div className="col-span-12 lg:col-span-8 bg-white dark:bg-dark-card p-6 rounded-[2.5rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px]">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Carga Operativa Temporal</h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500">Distribución de demanda por franja horaria</p>
               </div>
-              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-4 py-2 rounded-xl">
-                 <Clock size={16} className="text-brand-turquoise" />
-                 <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Hora Pico: {stats.peakHour?.hour}:00</span>
-              </div>
+              {stats.sessionsByHour?.some(h => h.count > 0) && (
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-4 py-2 rounded-xl">
+                   <Clock size={16} className="text-brand-turquoise" />
+                   <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Hora Pico: {stats.peakHour?.hour || '00'}:00</span>
+                </div>
+              )}
             </div>
             <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2DD4BF" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#2DD4BF" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="hour" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} dy={8} />
-                  <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
-                  <Tooltip isAnimationActive={false} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
-                  <Area 
-                    isAnimationActive={false}
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#0D9488" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorCount)" 
-                    name="Volumen Histórico"
-                    connectNulls
-                    data={chartData.filter(d => d.type === 'historical' || d === chartData.find(x => x.type === 'historical' && chartData[chartData.indexOf(x)+1]?.type === 'forecast'))}
-                  />
-                  <Area 
-                    isAnimationActive={false}
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#0D9488" 
-                    strokeWidth={3} 
-                    strokeDasharray="5 5"
-                    fill="transparent"
-                    name="Proyección AI"
-                    connectNulls
-                    data={chartData.filter(d => d.type === 'forecast' || d === chartData.filter(x => x.type === 'historical').pop())}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {stats.sessionsByHour?.some(h => h.count > 0) ? (
+                <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                    <XAxis dataKey="hour" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} dy={8} />
+                    <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tick={{ fill: '#94A3B8' }} />
+                    <Tooltip isAnimationActive={false} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
+                    <Bar
+                      isAnimationActive={false}
+                      dataKey="count"
+                      fill="#40E0D0"
+                      radius={[4, 4, 0, 0]}
+                      name="Volumen por Hora"
+                      data={chartData.filter(d => d.type === 'historical')}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-sm font-medium text-slate-400">
+                  Dashboard esperando datos de Inicio o Fecha
+                </div>
+              )}
             </div>
           </div>
         )}
 
+        {/* Missing Categorical Fallbacks */}
+        {show('hourly') && !(stats.allCategoricalStats?.some(c => c.header.toLowerCase().includes('cola') || c.header.toLowerCase().includes('canal'))) && (
+           <div className="col-span-12 lg:col-span-4 bg-white dark:bg-dark-card p-6 rounded-[2.5rem] border border-slate-100 dark:border-dark-border shadow-sm flex flex-col h-[400px] justify-center items-center">
+               <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 mb-4">
+                 <Globe size={24} />
+               </div>
+               <p className="text-sm font-medium text-slate-400 text-center">Dashboard esperando datos de Cola o Canal</p>
+           </div>
+        )}
+
         {/* Dynamic Categorical Widgets */}
-        {(stats.allCategoricalStats ?? []).map((cat, idx) => (
+        {(stats.allCategoricalStats ?? []).map((cat, idx) => {
+          const isPie = cat.header.toLowerCase().includes('cola') || cat.header.toLowerCase().includes('canal');
+          return (
           <div 
             key={cat.header}
             className={cn(
@@ -270,13 +268,13 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                 )}
               </h3>
               <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400">
-                {idx === 0 ? <Globe size={16} /> : idx === 1 ? <Sparkles size={16} /> : <Share2 size={16} />}
+                {isPie ? <Globe size={16} /> : <Sparkles size={16} />}
               </div>
             </div>
             <p className="text-xs text-slate-400 mb-6">Distribución de impacto por {cat.header.toLowerCase()}</p>
             
             <div className="flex-1 flex flex-col min-h-0">
-               {idx === 0 ? (
+               {isPie ? (
                 <div className="flex-1 relative flex items-center justify-center">
                     <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                       <PieChart>
@@ -328,7 +326,7 @@ export function Dashboard({ stats, insights, isPublic, onShare, activeWidgets, o
                </div>
             </div>
           </div>
-        ))}
+        )})}
 
         {/* Control de Mandos Operativo */}
         {show('mandos') && (

@@ -76,6 +76,20 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
   // 0. Preliminary Header Cleaning (Blindaje contra archivos corruptos o mal formateados)
   const headers = headersRaw.map(h => {
     let clean = String(h || '').replace(/\n/g, ' ').trim();
+    // Manual mapping for broken characters commonly found in CSVs
+    clean = clean.replace(/Ã³/g, 'ó')
+                 .replace(/Ã¡/g, 'á')
+                 .replace(/Ã©/g, 'é')
+                 .replace(/Ã­/g, 'í')
+                 .replace(/Ãº/g, 'ú')
+                 .replace(/Ã±/g, 'ñ')
+                 .replace(/Ã /g, 'Á')
+                 .replace(/Ã‰/g, 'É')
+                 .replace(/Ã /g, 'Í')
+                 .replace(/Ã“/g, 'Ó')
+                 .replace(/Ãš/g, 'Ú')
+                 .replace(/Ã‘/g, 'Ñ');
+
     // Eliminar repeticiones de puntuación excesiva como :::: o ;;;;
     clean = clean.replace(/[:;,\.]{2,}/g, '');
     // Si la cabecera quedó vacía tras la limpieza, darle un nombre genérico
@@ -200,7 +214,15 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
       }
 
       // Numeric Mapping & Normalization
-      if (columnProfiles[colIndex].isNumeric || columnProfiles[colIndex].normHeader.includes('duracion') || columnProfiles[colIndex].normHeader.includes('tiempo')) {
+      const lowerHeader = header.toLowerCase();
+      const isTimeCol = lowerHeader.includes('total de conversación') || 
+                        lowerHeader.includes('espera en cola') || 
+                        lowerHeader.includes('espera agente') || 
+                        lowerHeader.includes('tiempo medio de respuesta') ||
+                        columnProfiles[colIndex].normHeader.includes('duracion') || 
+                        columnProfiles[colIndex].normHeader.includes('tiempo');
+
+      if (columnProfiles[colIndex].isNumeric || isTimeCol) {
         let num = 0;
         if (String(value).includes(':')) {
            num = parseTimeToSeconds(String(value));
@@ -212,6 +234,17 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
           if (!numericValues[header]) numericValues[header] = [];
           numericValues[header].push(num);
         }
+      }
+
+      if (isTimeCol) {
+          if (!value || value === '-' || String(value).trim() === '') {
+              displayValue = '-';
+          } else {
+              const num = String(value).includes(':') ? parseTimeToSeconds(String(value)) : parseFloat(String(value));
+              displayValue = isNaN(num) ? '-' : formatDuration(num);
+          }
+      } else if (!value || value === '-' || String(value).trim() === '') {
+          displayValue = '-';
       }
 
       rowObj[header] = displayValue;
@@ -266,7 +299,10 @@ export function processData(headersRaw: string[], rows: string[][]): { processed
     };
     
     const prof = columnProfiles.find(p => p.header === key);
-    if (prof?.normHeader.includes('duracion') || prof?.normHeader.includes('tiempo')) {
+    const lowerKey = key.toLowerCase();
+    if (prof?.normHeader.includes('duracion') || prof?.normHeader.includes('tiempo') || 
+        lowerKey.includes('total de conversación') || lowerKey.includes('espera en cola') || 
+        lowerKey.includes('espera agente') || lowerKey.includes('tiempo medio de respuesta')) {
       columnTotals[key] = formatDuration(sum);
     } else {
       columnTotals[key] = Math.round(sum);

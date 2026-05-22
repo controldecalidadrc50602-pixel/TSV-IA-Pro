@@ -16,7 +16,7 @@ import {
   Loader2, AlertCircle, LayoutDashboard as DashboardIcon, Table as TableIcon, 
   History, UploadCloud, Download, Menu, X, MessageSquare,
   LogOut, Save, Database, Vault, Presentation,
-  Settings as SettingsIcon, Sun, Moon, Image as ImageIcon,
+  Settings as SettingsIcon, Image as ImageIcon,
   Sparkles, ShieldCheck, FlaskConical, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -107,9 +107,11 @@ export default function App() {
     if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      document.body.style.backgroundColor = '#0E1117';
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
+      document.body.style.backgroundColor = '#F0F2F6';
     }
     localStorage.setItem('tsv_theme', theme);
   }, [theme]);
@@ -297,7 +299,8 @@ export default function App() {
     if (ext === 'tsv' || ext === 'csv' || ext === 'txt') {
       try {
         Papa.parse(file, {
-          delimiter: ext === 'csv' ? ',' : '\t',
+          delimiter: ext === 'csv' ? ';' : '\t',
+          encoding: 'ISO-8859-1',
           skipEmptyLines: true,
           complete: async (results) => {
             const rawData = results.data as string[][];
@@ -307,7 +310,8 @@ export default function App() {
                 return;
             }
             const headers = rawData[0];
-            const rawRows = rawData.slice(1);
+            // Skip the description row at index 1
+            const rawRows = rawData.length > 2 ? rawData.slice(2) : [];
             setPendingData({ headers, rows: rawRows, fileName: file.name });
             setIsLoading(false);
           },
@@ -642,8 +646,10 @@ export default function App() {
                 !isSidebarOpen && "justify-center px-0"
                 )}
             >
-                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} className="text-yellow-500" />}
-                {isSidebarOpen && (theme === 'light' ? "Modo Oscuro" : "Modo Claro")}
+                <span className="flex items-center justify-center text-lg">
+                  {theme === 'light' ? '🌙' : '☀️'}
+                </span>
+                {isSidebarOpen && <span>{theme === 'light' ? "Modo Oscuro" : "Modo Claro"}</span>}
             </button>
             
              <button
