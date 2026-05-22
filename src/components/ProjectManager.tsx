@@ -189,7 +189,7 @@ export function ProjectManager({ onProjectSelect, activeProjectId }: ProjectMana
                 placeholder="Nombre de la empresa..."
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-turquoise/20 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-turquoise/20"
               />
               
               <div className="space-y-2">
